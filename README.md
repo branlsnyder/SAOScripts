@@ -1,0 +1,136 @@
+# Stable Audio Open — Scripts
+
+Command-line tools for audio generation using [Stable Audio Open](https://huggingface.co/stabilityai/stable-audio-open-small) (small and large models). Supports **text-to-audio** generation from text prompts and **audio-to-audio** resynthesis that transforms existing audio guided by a text prompt.
+
+Built on top of [stable-audio-tools](https://github.com/Stability-AI/stable-audio-tools) by Stability AI.
+
+## Setup
+
+**Requirements:** Python 3.11+, a [Hugging Face](https://huggingface.co/) account with access to the Stable Audio Open model(s).
+
+```bash
+# Clone and create a virtual environment
+git clone https://github.com/branlsnyder/SAOScripts.git
+cd SAOScripts
+python -m venv venv
+source venv/bin/activate    # Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Download a model (requires HF authentication — run `huggingface-cli login` first)
+python downloadModelSmall.py   # ~400 MB small model
+# or
+python downloadModel.py        # larger model (~3 GB)
+```
+
+## Scripts
+
+### sampleReplace.py — Main generation script
+
+Supports two modes depending on whether `--indir` is provided.
+
+**Text-to-audio** — generate audio from a prompt:
+
+```bash
+python sampleReplace.py --prompt "solo violin music" -n 3 --duration 10
+```
+
+**Audio-to-audio** — restyle existing audio files guided by a prompt:
+
+```bash
+python sampleReplace.py --indir my_samples --prompt "warm analog pad" --noise-level 0.3
+```
+
+The `--noise-level` flag (0–1) controls how much the output departs from the original:
+
+| Range   | Effect                                           |
+| ------- | ------------------------------------------------ |
+| 0.1–0.2 | Very close to original (subtle restyling)        |
+| 0.3–0.5 | Moderate departure (new texture, same structure) |
+| 0.6–0.8 | Substantial regeneration (loose structural echo) |
+
+Per-file prompts can be supplied via a JSON map:
+
+```bash
+python sampleReplace.py --indir my_samples --prompt-file prompts.json
+```
+
+<details>
+<summary>Full options reference</summary>
+
+| Flag             | Default                                   | Description                                                                       |
+| ---------------- | ----------------------------------------- | --------------------------------------------------------------------------------- |
+| `--model`        | `stable-audio-open-small`                 | Which model to use (`stable-audio-open-small` or `stable-audio-open`)             |
+| `--indir`        | _(none)_                                  | Input directory of audio files. If omitted, runs in text-to-audio mode            |
+| `--outdir`       | `Audio/output/`                           | Output directory                                                                  |
+| `--prompt`       | _(none)_                                  | Text prompt (required for text-to-audio; applied to every file in audio-to-audio) |
+| `--prompt-file`  | _(none)_                                  | JSON file mapping filenames to prompts (audio-to-audio only)                      |
+| `--noise-level`  | `0.3`                                     | Init noise level 0–1 (audio-to-audio only)                                       |
+| `--steps`        | `8`                                       | Number of diffusion steps                                                         |
+| `--cfg-scale`    | `1.0`                                     | Classifier-free guidance scale (`stable-audio-open` only)                         |
+| `--sampler-type` | `pingpong`                                | Sampler type                                                                      |
+| `--seed`         | `-1`                                      | Random seed (`-1` for random)                                                     |
+| `--duration`     | _(auto)_                                  | Output duration in seconds                                                        |
+| `-n`             | `1`                                       | Number of files to generate (text-to-audio only)                                  |
+
+</details>
+
+### interpolateGen.py — Parameter sweep
+
+Generates multiple outputs while linearly sweeping a single parameter (e.g. `cfg_scale`, `steps`, `init_noise_level`) across a range. Useful for exploring how a parameter affects output character.
+
+```bash
+# Sweep CFG scale from 0 to 15 in 5 steps
+python interpolateGen.py --prompt "warm analog pad" --param cfg_scale --start 0 --end 15 -n 5
+
+# Audio-to-audio: sweep noise level on an input file
+python interpolateGen.py --init-audio my_loop.wav --prompt "dreamy pads" --param init_noise_level --start 0.1 --end 0.9 -n 5
+```
+
+<details>
+<summary>Full options reference</summary>
+
+| Flag                 | Default                   | Description                                                                                     |
+| -------------------- | ------------------------- | ----------------------------------------------------------------------------------------------- |
+| `--model`            | `stable-audio-open-small` | Which model to use                                                                              |
+| `--prompt`           | `dubstep bass growls`     | Text prompt                                                                                     |
+| `--param`            | `cfg_scale`               | Parameter to sweep (`cfg_scale`, `steps`, `sigma_min`, `sigma_max`, `init_noise_level`, `seed`) |
+| `--start`            | `0`                       | Start value                                                                                     |
+| `--end`              | `15`                      | End value                                                                                       |
+| `-n`                 | `5`                       | Number of outputs                                                                               |
+| `--init-audio`       | _(none)_                  | Audio file for audio-to-audio mode                                                              |
+| `--init_noise_level` | `0.7`                     | Noise level for audio-to-audio (when not sweeping it)                                           |
+| `--steps`            | `8`                       | Diffusion steps (when not sweeping)                                                             |
+| `--cfg_scale`        | `1`                       | CFG scale (when not sweeping)                                                                   |
+| `--seed`             | `-1`                      | Random seed                                                                                     |
+| `--duration`         | `11`                      | Output duration in seconds                                                                      |
+
+</details>
+
+### testGen.py — Smoke test
+
+Minimal script to verify the model loads and generates output.
+
+```bash
+python testGen.py
+python testGen.py --model stable-audio-open
+```
+
+### Utility scripts
+
+| Script                | Purpose                                                        |
+| --------------------- | -------------------------------------------------------------- |
+| `output_naming.py`    | Centralized output naming — all scripts write to `Audio/output/` with descriptive, timestamped filenames |
+| `downloadModel.py`    | Downloads `stable-audio-open-1.0` (large model) from Hugging Face |
+| `downloadModelSmall.py` | Downloads `stable-audio-open-small` from Hugging Face         |
+
+## Notes on models
+
+All generation scripts accept `--model stable-audio-open-small` (default) or `--model stable-audio-open`.
+
+The small model uses ARC post-training with a contrastive discriminator loss that replaces Classifier-Free Guidance (CFG). The `--cfg-scale` flag only has an effect with the large model. See [Novack et al. 2025](https://arxiv.org/abs/2505.08175) for details.
+
+## License
+
+The scripts in this repo are provided as-is. The Stable Audio Open models are subject to [Stability AI's licensing terms](https://huggingface.co/stabilityai/stable-audio-open-small).
