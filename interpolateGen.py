@@ -41,8 +41,8 @@ def parse_args():
     parser.add_argument("--init-audio", type=str, default=None,
                         help="Path to an audio file for audio-to-audio mode. "
                              "If omitted, runs text-to-audio.")
-    parser.add_argument("--init_noise_level", type=float, default=0.7,
-                        help="Init noise level for audio-to-audio (default: 0.7; "
+    parser.add_argument("--init_noise_level", type=float, default=0.3,
+                        help="Init noise level for audio-to-audio (default: 0.3; "
                              "used when not sweeping 'init_noise_level')")
     parser.add_argument("--seed", type=int, default=-1,
                         help="Random seed (-1 for random; used when not sweeping 'seed')")

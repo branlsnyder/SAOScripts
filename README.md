@@ -100,7 +100,7 @@ python interpolateGen.py --init-audio my_loop.wav --prompt "dreamy pads" --param
 | `--end`              | `15`                      | End value                                                                                       |
 | `-n`                 | `5`                       | Number of outputs                                                                               |
 | `--init-audio`       | _(none)_                  | Audio file for audio-to-audio mode                                                              |
-| `--init_noise_level` | `0.7`                     | Noise level for audio-to-audio (when not sweeping it)                                           |
+| `--init_noise_level` | `0.3`                     | Noise level for audio-to-audio (when not sweeping it)                                           |
 | `--steps`            | `8`                       | Diffusion steps (when not sweeping)                                                             |
 | `--cfg_scale`        | `1`                       | CFG scale (when not sweeping)                                                                   |
 | `--seed`             | `-1`                      | Random seed                                                                                     |
