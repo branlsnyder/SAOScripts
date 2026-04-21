@@ -1,0 +1,199 @@
+# StableAudioWorkspace Docs
+
+All three scripts accept a `--model` flag to choose between `stable-audio-open-small` (default) and `stable-audio-open` (the larger model). For example: `--model stable-audio-open`.
+
+---
+
+## sampleReplace.py
+
+Supports two modes: **audio-to-audio** (with `--indir`) and **text-to-audio** (without `--indir`).
+
+### Prompts I've used:
+
+```bash
+python sampleReplace.py --indir "/Users/brandonwoosnyder/Dropbox/docs-d/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/speakMathHits" --prompt "female a capella voice" --noise-level 0.3
+
+python sampleReplace.py --indir "/Users/brandonwoosnyder/Dropbox/docs-d/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/Audio/small-corpora" --prompt "growling loud dubstep banger" --noise-level 0.8 --steps 20
+
+python sampleReplace.py --prompt "solo violin music" --noise-level 0.8 --steps 20
+```
+
+### How it works
+
+**Audio-to-audio** (when `--indir` is provided):
+
+1. **Loads each input audio** from a folder using `soundfile.read` and passes it as `init_audio=(sample_rate, tensor)` to the model.
+2. **Resolves a text prompt** — you can supply a single global prompt (`--prompt`), a JSON file mapping filenames to individual prompts (`--prompt-file`), or let it auto-derive a rough prompt from the filename.
+3. **Sets `init_noise_level`** (default 0.3) which controls how much of the original structure to preserve vs. regenerate.
+4. **Generates** via `generate_diffusion_cond` with ping-pong sampling — the model encodes the input into latents, blends with noise at the specified level, and denoises guided by both the structural information and the text prompt.
+
+**Text-to-audio** (when `--indir` is omitted):
+
+1. Takes a `--prompt` (required in this mode) and generates audio purely from text.
+2. No `init_audio` or `init_noise_level` is used.
+3. Use `-n` to generate multiple files in one run.
+4. Output defaults to `generated_outputs/`.
+
+### Usage examples
+
+**Audio-to-audio — single prompt for all files:**
+
+```bash
+python sampleReplace.py --indir my_samples --prompt "punchy techno drum hit"
+```
+
+**Audio-to-audio — control how much the output departs from the input:**
+
+```bash
+python sampleReplace.py --indir my_samples --prompt "warm analog pad" --noise-level 0.2
+```
+
+#### Noise level guide
+
+| Range   | Effect                                           |
+| ------- | ------------------------------------------------ |
+| 0.1–0.2 | Very close to original (subtle restyling)        |
+| 0.3–0.5 | Moderate departure (new texture, same structure) |
+| 0.6–0.8 | Substantial regeneration (loose structural echo) |
+
+**Audio-to-audio — per-file prompts via JSON:**
+
+```bash
+python sampleReplace.py --indir my_samples --prompt-file prompts.json
+```
+
+where `prompts.json` looks like:
+
+```json
+{
+  "kick.wav": "deep punchy kick drum",
+  "snare.wav": "crispy snare with reverb tail",
+  "hihat.wav": "tight closed hi-hat"
+}
+```
+
+**Text-to-audio — generate 3 files from a prompt:**
+
+```bash
+python sampleReplace.py --prompt "dark ambient texture" -n 3 --duration 10
+```
+
+**Audio-to-audio — all options:**
+
+```bash
+python sampleReplace.py \
+  --indir my_samples \
+  --outdir my_samples_out \
+  --prompt "dubstep bass growl" \
+  --noise-level 0.35 \
+  --steps 8 \
+  --cfg-scale 1.0 \
+  --sampler-type pingpong \
+  --seed 42 \
+  --duration 5.0
+```
+
+### Options reference
+
+| Flag             | Default                                   | Description                                                                       |
+| ---------------- | ----------------------------------------- | --------------------------------------------------------------------------------- |
+| `--model`        | `stable-audio-open-small`                 | Which model to use (`stable-audio-open-small` or `stable-audio-open`)             |
+| `--indir`        | _(none)_                                  | Input directory of audio files. If omitted, runs in text-to-audio mode            |
+| `--outdir`       | `<indir>_replaced` or `generated_outputs` | Output directory                                                                  |
+| `--prompt`       | _(none)_                                  | Text prompt (required for text-to-audio; applied to every file in audio-to-audio) |
+| `--prompt-file`  | _(none)_                                  | JSON file mapping filenames to prompts (audio-to-audio only)                      |
+| `--noise-level`  | `0.3`                                     | Init noise level 0–1 (audio-to-audio only). Lower preserves more structure        |
+| `--steps`        | `8`                                       | Number of diffusion steps                                                         |
+| `--cfg-scale`    | `1.0`                                     | Classifier-free guidance scale (`stable-audio-open` only — see note below)        |
+| `--sampler-type` | `pingpong`                                | Sampler type                                                                      |
+| `--seed`         | `-1`                                      | Random seed (`-1` for random per file)                                            |
+| `--duration`     | _(auto)_                                  | Output duration in seconds (default: match input in a2a, model max in t2a)        |
+| `-n`             | `1`                                       | Number of files to generate (text-to-audio only)                                  |
+
+Audio-to-audio output files are saved as `<original_stem>_replaced.wav`. Text-to-audio output files are saved as `gen_<index>_<timestamp>.wav`.
+
+> **Note on `--cfg-scale`:** Classifier-Free Guidance (CFG) only applies to `stable-audio-open` (the large model). The small model (`stable-audio-open-small`) uses ARC post-training with a contrastive discriminator loss that replaces CFG for prompt adherence, so `--cfg-scale` has no effect when using the small model. See [Novack et al. 2025](https://arxiv.org/abs/2505.08175) §2.4–2.5 for details.
+
+---
+
+## interpolateGen.py
+
+Generates multiple audio files while linearly sweeping a single generation parameter across a range. Supports both **text-to-audio** (default) and **audio-to-audio** (with `--init-audio`). Useful for exploring how a parameter (e.g. `cfg_scale`, `steps`, `init_noise_level`) affects output character while keeping everything else fixed.
+
+### How it works
+
+1. **Picks a parameter to sweep** (`--param`) and computes `n` evenly-spaced values between `--start` and `--end`.
+2. **Generates one audio file per value**, overriding that parameter in the generation call while keeping all other settings constant.
+3. If `--init-audio` is provided, the script loads the audio file and passes it as `init_audio` alongside `init_noise_level` to each generation call (audio-to-audio mode). Otherwise it generates purely from the text prompt.
+4. **Saves each output** with a descriptive filename that includes the parameter name, value, and a timestamp.
+
+### Usage examples
+
+**Text-to-audio — sweep CFG scale from 0 to 15 in 5 steps:**
+
+```bash
+python interpolateGen.py --prompt "warm analog pad" --param cfg_scale --start 0 --end 15 -n 5
+```
+
+**Text-to-audio — sweep diffusion steps using the large model:**
+
+```bash
+python interpolateGen.py --model stable-audio-open --prompt "glitchy percussion" --param steps --start 2 --end 50 -n 10
+```
+
+**Audio-to-audio — sweep noise level on an input file:**
+
+```bash
+python interpolateGen.py --init-audio my_loop.wav --prompt "dreamy pads" --param init_noise_level --start 0.1 --end 0.9 -n 5
+```
+
+### Options reference
+
+| Flag                 | Default                   | Description                                                                                     |
+| -------------------- | ------------------------- | ----------------------------------------------------------------------------------------------- |
+| `--model`            | `stable-audio-open-small` | Which model to use (`stable-audio-open-small` or `stable-audio-open`)                           |
+| `--prompt`           | `dubstep bass growls`     | Text prompt for generation                                                                      |
+| `--duration`         | `11`                      | Output duration in seconds                                                                      |
+| `--param`            | `cfg_scale`               | Parameter to sweep (`cfg_scale`, `steps`, `sigma_min`, `sigma_max`, `init_noise_level`, `seed`) |
+| `--start`            | `0`                       | Start value for the swept parameter                                                             |
+| `--end`              | `15`                      | End value for the swept parameter                                                               |
+| `-n`                 | `5`                       | Number of outputs to generate                                                                   |
+| `--steps`            | `8`                       | Diffusion steps (used when not sweeping `steps`)                                                |
+| `--cfg_scale`        | `1`                       | CFG scale — `stable-audio-open` only (used when not sweeping `cfg_scale`)                       |
+| `--sigma_min`        | `0.3`                     | Sigma min (used when not sweeping `sigma_min`)                                                  |
+| `--sigma_max`        | `500`                     | Sigma max (used when not sweeping `sigma_max`)                                                  |
+| `--sampler_type`     | `pingpong`                | Sampler type                                                                                    |
+| `--init-audio`       | _(none)_                  | Path to an audio file for audio-to-audio mode. If omitted, text-to-audio                        |
+| `--init_noise_level` | `0.7`                     | Init noise level for audio-to-audio (used when not sweeping `init_noise_level`)                 |
+| `--seed`             | `-1`                      | Random seed (`-1` for random; used when not sweeping `seed`)                                    |
+| `--outdir`           | `sweep_outputs`           | Output directory                                                                                |
+
+Output files are named `<param>_<value>_<index>_<timestamp>.wav`.
+
+> **Note on `--cfg_scale`:** CFG only applies to `stable-audio-open` (the large model). The small model uses ARC post-training with a contrastive discriminator loss that replaces CFG, so sweeping or setting `cfg_scale` has no effect with the small model. See [Novack et al. 2025](https://arxiv.org/abs/2505.08175) §2.4–2.5 for details.
+
+---
+
+## testGen.py
+
+A minimal smoke-test script that generates a single audio file with hardcoded generation settings. Useful for quickly verifying that the model loads and produces output.
+
+### How it works
+
+Loads the model, runs a single generation with a fixed prompt ("dubstep bass growls"), and writes `output1.wav` to the current directory. No other CLI options beyond `--model`.
+
+### Usage examples
+
+```bash
+# Quick test with the default small model
+python testGen.py
+
+# Test with the large model
+python testGen.py --model stable-audio-open
+```
+
+### Options reference
+
+| Flag      | Default                   | Description                                                           |
+| --------- | ------------------------- | --------------------------------------------------------------------- |
+| `--model` | `stable-audio-open-small` | Which model to use (`stable-audio-open-small` or `stable-audio-open`) |

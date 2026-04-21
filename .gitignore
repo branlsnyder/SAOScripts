@@ -1,0 +1,26 @@
+# Virtual environment
+venv/
+
+# Audio data
+Audio/
+*.wav
+
+# Generated outputs
+generated_outputs/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+
+# Secrets / tokens
+bwoosnydToken read.txt
+
+# Model weights (if you ever download them locally)
+*.ckpt
+*.pt
+*.pth
+*.safetensors
+*.bin
