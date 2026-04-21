@@ -26,7 +26,7 @@ python downloadModel.py        # larger model (~3 GB)
 
 ## Scripts
 
-### sampleReplace.py — Main generation script
+### sampleReplace.py - Generates Audio in Batches (e.g. for generating a variant of an audio corpus)
 
 Supports two modes depending on whether `--indir` is provided.
 
@@ -59,24 +59,24 @@ python sampleReplace.py --indir my_samples --prompt-file prompts.json
 <details>
 <summary>Full options reference</summary>
 
-| Flag             | Default                                   | Description                                                                       |
-| ---------------- | ----------------------------------------- | --------------------------------------------------------------------------------- |
-| `--model`        | `stable-audio-open-small`                 | Which model to use (`stable-audio-open-small` or `stable-audio-open`)             |
-| `--indir`        | _(none)_                                  | Input directory of audio files. If omitted, runs in text-to-audio mode            |
-| `--outdir`       | `Audio/output/`                           | Output directory                                                                  |
-| `--prompt`       | _(none)_                                  | Text prompt (required for text-to-audio; applied to every file in audio-to-audio) |
-| `--prompt-file`  | _(none)_                                  | JSON file mapping filenames to prompts (audio-to-audio only)                      |
-| `--noise-level`  | `0.3`                                     | Init noise level 0–1 (audio-to-audio only)                                       |
-| `--steps`        | `8`                                       | Number of diffusion steps                                                         |
-| `--cfg-scale`    | `1.0`                                     | Classifier-free guidance scale (`stable-audio-open` only)                         |
-| `--sampler-type` | `pingpong`                                | Sampler type                                                                      |
-| `--seed`         | `-1`                                      | Random seed (`-1` for random)                                                     |
-| `--duration`     | _(auto)_                                  | Output duration in seconds                                                        |
-| `-n`             | `1`                                       | Number of files to generate (text-to-audio only)                                  |
+| Flag             | Default                   | Description                                                                       |
+| ---------------- | ------------------------- | --------------------------------------------------------------------------------- |
+| `--model`        | `stable-audio-open-small` | Which model to use (`stable-audio-open-small` or `stable-audio-open`)             |
+| `--indir`        | _(none)_                  | Input directory of audio files. If omitted, runs in text-to-audio mode            |
+| `--outdir`       | `Audio/output/`           | Output directory                                                                  |
+| `--prompt`       | _(none)_                  | Text prompt (required for text-to-audio; applied to every file in audio-to-audio) |
+| `--prompt-file`  | _(none)_                  | JSON file mapping filenames to prompts (audio-to-audio only)                      |
+| `--noise-level`  | `0.3`                     | Init noise level 0–1 (audio-to-audio only)                                        |
+| `--steps`        | `8`                       | Number of diffusion steps                                                         |
+| `--cfg-scale`    | `1.0`                     | Classifier-free guidance scale (`stable-audio-open` only)                         |
+| `--sampler-type` | `pingpong`                | Sampler type                                                                      |
+| `--seed`         | `-1`                      | Random seed (`-1` for random)                                                     |
+| `--duration`     | _(auto)_                  | Output duration in seconds                                                        |
+| `-n`             | `1`                       | Number of files to generate (text-to-audio only)                                  |
 
 </details>
 
-### interpolateGen.py — Parameter sweep
+### interpolateGen.py — Generates batch of audio interpolating across a given paramter
 
 Generates multiple outputs while linearly sweeping a single parameter (e.g. `cfg_scale`, `steps`, `init_noise_level`) across a range. Useful for exploring how a parameter affects output character.
 
@@ -108,7 +108,7 @@ python interpolateGen.py --init-audio my_loop.wav --prompt "dreamy pads" --param
 
 </details>
 
-### testGen.py — Smoke test
+### testGen.py — generates a single audio, for testing
 
 Minimal script to verify the model loads and generates output.
 
@@ -117,13 +117,14 @@ python testGen.py
 python testGen.py --model stable-audio-open
 ```
 
-### Utility scripts
+### Utility modules
 
-| Script                | Purpose                                                        |
-| --------------------- | -------------------------------------------------------------- |
-| `output_naming.py`    | Centralized output naming — all scripts write to `Audio/output/` with descriptive, timestamped filenames |
-| `downloadModel.py`    | Downloads `stable-audio-open-1.0` (large model) from Hugging Face |
-| `downloadModelSmall.py` | Downloads `stable-audio-open-small` from Hugging Face         |
+| Script                  | Purpose                                                                                                  |
+| ----------------------- | -------------------------------------------------------------------------------------------------------- |
+| `audio_utils.py`        | Shared model loading and audio post-processing (used by all generation scripts)                          |
+| `output_naming.py`      | Centralized output naming — all scripts write to `Audio/output/` with descriptive, timestamped filenames |
+| `downloadModel.py`      | Downloads `stable-audio-open-1.0` (large model) from Hugging Face                                        |
+| `downloadModelSmall.py` | Downloads `stable-audio-open-small` from Hugging Face                                                    |
 
 ## Notes on models
 

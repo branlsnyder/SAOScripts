@@ -64,15 +64,18 @@ def build_output_path(
     sweep_value=None,
     index: int = None,
     ext: str = ".wav",
+    output_dir: str = None,
 ) -> str:
     """
-    Build a standardized output file path under Audio/output/.
+    Build a standardized output file path.
 
+    Writes to *output_dir* if given, otherwise defaults to Audio/output/.
     For audio-to-audio, pass input_filename (the original file's basename).
     For text-to-audio, pass prompt (first 7 chars are used).
     For sweeps, pass sweep_param and sweep_value.
     """
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    dest = output_dir if output_dir else OUTPUT_DIR
+    os.makedirs(dest, exist_ok=True)
 
     # --- base identifier ---
     if input_filename:
@@ -118,4 +121,4 @@ def build_output_path(
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     filename = f"{base}_{flags}_{timestamp}{ext}" if flags else f"{base}_{timestamp}{ext}"
-    return os.path.join(OUTPUT_DIR, filename)
+    return os.path.join(dest, filename)

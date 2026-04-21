@@ -1,15 +1,8 @@
 import argparse
-import torch
 import soundfile as sf
-from einops import rearrange
-from stable_audio_tools import get_pretrained_model
 from stable_audio_tools.inference.generation import generate_diffusion_cond
 from output_naming import build_output_path
-
-MODEL_REPO_MAP = {
-    "stable-audio-open-small": "stabilityai/stable-audio-open-small",
-    "stable-audio-open": "stabilityai/stable-audio-open-1.0",
-}
+from audio_utils import MODEL_REPO_MAP, get_device, load_model, postprocess_output
 
 parser = argparse.ArgumentParser(description="Quick test generation")
 parser.add_argument("--model", type=str, default="stable-audio-open-small",
@@ -17,20 +10,13 @@ parser.add_argument("--model", type=str, default="stable-audio-open-small",
                     help="Which model to use (default: stable-audio-open-small)")
 args = parser.parse_args()
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-
-model_repo = MODEL_REPO_MAP[args.model]
-print(f"Loading model {model_repo}...")
-model, model_config = get_pretrained_model(model_repo)
-sample_rate = model_config["sample_rate"]
-sample_size = model_config["sample_size"]
-
-model = model.to(device)
+device = get_device()
+model, sample_rate, sample_size, _ = load_model(args.model, device)
 
 conditioning = [{
     "prompt": "dubstep bass growls",
     "seconds_start": 0,
-    "seconds_total": 11
+    "seconds_total": 11,
 }]
 
 output = generate_diffusion_cond(
@@ -42,12 +28,10 @@ output = generate_diffusion_cond(
     sigma_min=0.3,
     sigma_max=500,
     sampler_type="dpmpp-3m-sde",
-    device=device
+    device=device,
 )
 
-output = rearrange(output, "b d n -> d (b n)")
-
-output = output.to(torch.float32).div(torch.max(torch.abs(output))).clamp(-1, 1).mul(32767).to(torch.int16).cpu()
+output = postprocess_output(output, sample_rate)
 
 out_path = build_output_path(
     prompt=conditioning[0]["prompt"],
