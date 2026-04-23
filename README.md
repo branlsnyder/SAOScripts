@@ -76,9 +76,9 @@ python sampleReplace.py --indir my_samples --prompt-file prompts.json
 
 </details>
 
-### interpolateGen.py — Generates batch of audio interpolating across a given paramter
+### interpolateGen.py — Generates batch of audio interpolating across a given parameter
 
-Generates multiple outputs while linearly sweeping a single parameter (e.g. `cfg_scale`, `steps`, `init_noise_level`) across a range. Useful for exploring how a parameter affects output character.
+Generates multiple outputs while linearly sweeping a single parameter (e.g. `cfg_scale`, `steps`, `init_noise_level`) across a range. Useful for exploring how a parameter affects output character. `--init-audio` accepts a single file **or a folder** of audio files for batch processing (the sweep is run independently for each file, with the model loaded only once).
 
 ```bash
 # Sweep CFG scale from 0 to 15 in 5 steps
@@ -86,25 +86,32 @@ python interpolateGen.py --prompt "warm analog pad" --param cfg_scale --start 0 
 
 # Audio-to-audio: sweep noise level on an input file
 python interpolateGen.py --init-audio my_loop.wav --prompt "dreamy pads" --param init_noise_level --start 0.1 --end 0.9 -n 5
+
+# Batch audio-to-audio: sweep across every file in a folder
+python interpolateGen.py --init-audio my_samples/ --prompt "dreamy pads" --param init_noise_level --start 0.1 --end 0.9 -n 5
+
+# Trim outputs to match each source file's duration
+python interpolateGen.py --init-audio my_samples/ --prompt "dreamy pads" --param init_noise_level --start 0.1 --end 0.9 -n 5 --match-source-length
 ```
 
 <details>
 <summary>Full options reference</summary>
 
-| Flag                 | Default                   | Description                                                                                     |
-| -------------------- | ------------------------- | ----------------------------------------------------------------------------------------------- |
-| `--model`            | `stable-audio-open-small` | Which model to use                                                                              |
-| `--prompt`           | `dubstep bass growls`     | Text prompt                                                                                     |
-| `--param`            | `cfg_scale`               | Parameter to sweep (`cfg_scale`, `steps`, `sigma_min`, `sigma_max`, `init_noise_level`, `seed`) |
-| `--start`            | `0`                       | Start value                                                                                     |
-| `--end`              | `15`                      | End value                                                                                       |
-| `-n`                 | `5`                       | Number of outputs                                                                               |
-| `--init-audio`       | _(none)_                  | Audio file for audio-to-audio mode                                                              |
-| `--init_noise_level` | `0.3`                     | Noise level for audio-to-audio (when not sweeping it)                                           |
-| `--steps`            | `8`                       | Diffusion steps (when not sweeping)                                                             |
-| `--cfg_scale`        | `1`                       | CFG scale (when not sweeping)                                                                   |
-| `--seed`             | `-1`                      | Random seed                                                                                     |
-| `--duration`         | `11`                      | Output duration in seconds                                                                      |
+| Flag                    | Default                   | Description                                                                                     |
+| ----------------------- | ------------------------- | ----------------------------------------------------------------------------------------------- |
+| `--model`               | `stable-audio-open-small` | Which model to use                                                                              |
+| `--prompt`              | `dubstep bass growls`     | Text prompt                                                                                     |
+| `--param`               | `cfg_scale`               | Parameter to sweep (`cfg_scale`, `steps`, `sigma_min`, `sigma_max`, `init_noise_level`, `seed`) |
+| `--start`               | `0`                       | Start value                                                                                     |
+| `--end`                 | `15`                      | End value                                                                                       |
+| `-n`                    | `5`                       | Number of outputs                                                                               |
+| `--init-audio`          | _(none)_                  | Audio file **or folder** for audio-to-audio mode                                                |
+| `--init_noise_level`    | `0.3`                     | Noise level for audio-to-audio (when not sweeping it)                                           |
+| `--match-source-length` | `false`                   | Trim each output to match its source file's duration (audio-to-audio only)                      |
+| `--steps`               | `8`                       | Diffusion steps (when not sweeping)                                                             |
+| `--cfg_scale`           | `1`                       | CFG scale (when not sweeping)                                                                   |
+| `--seed`                | `-1`                      | Random seed                                                                                     |
+| `--duration`            | `11`                      | Output duration in seconds                                                                      |
 
 </details>
 

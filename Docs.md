@@ -120,12 +120,15 @@ All output files are saved to `Audio/output/` (or `--outdir`) with descriptive, 
 
 Generates multiple audio files while linearly sweeping a single generation parameter across a range. Supports both **text-to-audio** (default) and **audio-to-audio** (with `--init-audio`). Useful for exploring how a parameter (e.g. `cfg_scale`, `steps`, `init_noise_level`) affects output character while keeping everything else fixed.
 
+`--init-audio` accepts a single file **or a folder** of audio files. When a folder is given, the sweep is run independently for each audio file in the folder (batch mode), with the model loaded only once.
+
 ### How it works
 
 1. **Picks a parameter to sweep** (`--param`) and computes `n` evenly-spaced values between `--start` and `--end`.
-2. **Generates one audio file per value**, overriding that parameter in the generation call while keeping all other settings constant.
-3. If `--init-audio` is provided, the script loads the audio file and passes it as `init_audio` alongside `init_noise_level` to each generation call (audio-to-audio mode). Otherwise it generates purely from the text prompt.
-4. **Saves each output** with a descriptive filename that includes the parameter name, value, and a timestamp.
+2. **Resolves `--init-audio`**: if it points to a directory, all audio files inside (`.wav`, `.flac`, `.ogg`, `.mp3`, `.aif`, `.aiff`) are collected and sorted; if it points to a file, that single file is used; if omitted, the script runs in text-to-audio mode.
+3. **Generates one audio file per sweep value per input file**, overriding the swept parameter in the generation call while keeping all other settings constant.
+4. If `--match-source-length` is set, each output is trimmed to exactly match its source file's duration.
+5. **Saves each output** with a descriptive filename that includes the parameter name, value, and a timestamp.
 
 ### Usage examples
 
@@ -141,31 +144,44 @@ python interpolateGen.py --prompt "warm analog pad" --param cfg_scale --start 0 
 python interpolateGen.py --model stable-audio-open --prompt "glitchy percussion" --param steps --start 2 --end 50 -n 10
 ```
 
-**Audio-to-audio — sweep noise level on an input file:**
+**Audio-to-audio — sweep noise level on a single file:**
 
 ```bash
 python interpolateGen.py --init-audio my_loop.wav --prompt "dreamy pads" --param init_noise_level --start 0.1 --end 0.9 -n 5
 ```
 
+**Batch audio-to-audio — sweep across every file in a folder:**
+
+```bash
+python interpolateGen.py --init-audio my_samples/ --prompt "dreamy pads" --param init_noise_level --start 0.1 --end 0.9 -n 5
+```
+
+**Trim outputs to match each source file's duration:**
+
+```bash
+python interpolateGen.py --init-audio my_samples/ --prompt "dreamy pads" --param init_noise_level --start 0.1 --end 0.9 -n 5 --match-source-length
+```
+
 ### Options reference
 
-| Flag                 | Default                   | Description                                                                                     |
-| -------------------- | ------------------------- | ----------------------------------------------------------------------------------------------- |
-| `--model`            | `stable-audio-open-small` | Which model to use (`stable-audio-open-small` or `stable-audio-open`)                           |
-| `--prompt`           | `dubstep bass growls`     | Text prompt for generation                                                                      |
-| `--duration`         | `11`                      | Output duration in seconds                                                                      |
-| `--param`            | `cfg_scale`               | Parameter to sweep (`cfg_scale`, `steps`, `sigma_min`, `sigma_max`, `init_noise_level`, `seed`) |
-| `--start`            | `0`                       | Start value for the swept parameter                                                             |
-| `--end`              | `15`                      | End value for the swept parameter                                                               |
-| `-n`                 | `5`                       | Number of outputs to generate                                                                   |
-| `--steps`            | `8`                       | Diffusion steps (used when not sweeping `steps`)                                                |
-| `--cfg_scale`        | `1`                       | CFG scale — `stable-audio-open` only (used when not sweeping `cfg_scale`)                       |
-| `--sigma_min`        | `0.3`                     | Sigma min (used when not sweeping `sigma_min`)                                                  |
-| `--sigma_max`        | `500`                     | Sigma max (used when not sweeping `sigma_max`)                                                  |
-| `--sampler_type`     | `pingpong`                | Sampler type                                                                                    |
-| `--init-audio`       | _(none)_                  | Path to an audio file for audio-to-audio mode. If omitted, text-to-audio                        |
-| `--init_noise_level` | `0.3`                     | Init noise level for audio-to-audio (used when not sweeping `init_noise_level`)                 |
-| `--seed`             | `-1`                      | Random seed (`-1` for random; used when not sweeping `seed`)                                    |
+| Flag                    | Default                   | Description                                                                                     |
+| ----------------------- | ------------------------- | ----------------------------------------------------------------------------------------------- |
+| `--model`               | `stable-audio-open-small` | Which model to use (`stable-audio-open-small` or `stable-audio-open`)                           |
+| `--prompt`              | `dubstep bass growls`     | Text prompt for generation                                                                      |
+| `--duration`            | `11`                      | Output duration in seconds                                                                      |
+| `--param`               | `cfg_scale`               | Parameter to sweep (`cfg_scale`, `steps`, `sigma_min`, `sigma_max`, `init_noise_level`, `seed`) |
+| `--start`               | `0`                       | Start value for the swept parameter                                                             |
+| `--end`                 | `15`                      | End value for the swept parameter                                                               |
+| `-n`                    | `5`                       | Number of outputs to generate                                                                   |
+| `--steps`               | `8`                       | Diffusion steps (used when not sweeping `steps`)                                                |
+| `--cfg_scale`           | `1`                       | CFG scale — `stable-audio-open` only (used when not sweeping `cfg_scale`)                       |
+| `--sigma_min`           | `0.3`                     | Sigma min (used when not sweeping `sigma_min`)                                                  |
+| `--sigma_max`           | `500`                     | Sigma max (used when not sweeping `sigma_max`)                                                  |
+| `--sampler_type`        | `pingpong`                | Sampler type                                                                                    |
+| `--init-audio`          | _(none)_                  | Path to an audio file **or folder** for audio-to-audio mode. If omitted, text-to-audio          |
+| `--init_noise_level`    | `0.3`                     | Init noise level for audio-to-audio (used when not sweeping `init_noise_level`)                 |
+| `--match-source-length` | `false`                   | Trim each output to match its source file's duration (audio-to-audio only)                      |
+| `--seed`                | `-1`                      | Random seed (`-1` for random; used when not sweeping `seed`)                                    |
 
 All output files are saved to `Audio/output/` with descriptive, timestamped filenames generated by `output_naming.py`.
 
