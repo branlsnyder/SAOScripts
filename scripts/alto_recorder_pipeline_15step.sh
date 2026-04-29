@@ -90,7 +90,7 @@ for ((i=0; i<NUM_PROMPTS; i++)); do
         --start 0.6 \
         --end 0.9 \
         -n 2 \
-        --steps 2 \
+        --steps 15 \
         --cfg_scale 1 \
         --sampler_type pingpong \
         --match-source-length

@@ -62,7 +62,10 @@ To loop over prompts from a JSON file:
 
 ```bash
 PROMPT_FILE="scripts/my_prompts.json"
-readarray -t PROMPTS < <(python3 -c "import json, sys; [print(p) for p in json.load(open(sys.argv[1]))]" "$PROMPT_FILE")
+PROMPTS=()
+while IFS= read -r line; do
+    PROMPTS+=("$line")
+done < <(python3 -c "import json, sys; [print(p) for p in json.load(open(sys.argv[1]))]" "$PROMPT_FILE")
 
 for ((i=0; i<${#PROMPTS[@]}; i++)); do
     PROMPT="${PROMPTS[$i]}"
