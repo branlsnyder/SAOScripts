@@ -1,11 +1,12 @@
 import os
 import argparse
 import glob
+from datetime import datetime
 import numpy as np
 import torch
 import soundfile as sf
 from stable_audio_tools.inference.generation import generate_diffusion_cond
-from output_naming import build_output_path
+from output_naming import build_output_path, OUTPUT_DIR
 from audio_utils import MODEL_REPO_MAP, get_device, load_model, postprocess_output
 
 AUDIO_EXTENSIONS = {".wav", ".flac", ".ogg", ".mp3", ".aif", ".aiff"}
@@ -55,6 +56,9 @@ def parse_args():
     parser.add_argument("--match-source-length", action="store_true", default=False,
                         help="Trim each output to the exact duration of its source "
                              "init-audio file. Only applies in audio-to-audio mode.")
+    parser.add_argument("--outdir", type=str, default=None,
+                        help="Output directory. If omitted, a timestamped subfolder "
+                             "is created inside Audio/output/.")
     return parser.parse_args()
 
 
@@ -92,6 +96,7 @@ def run_sweep(
     args,
     sweep_values,
     init_audio_path=None,
+    output_dir=None,
 ):
     """Run the parameter sweep for a single init-audio file (or text-to-audio if None)."""
     conditioning = [{
@@ -156,6 +161,7 @@ def run_sweep(
             sweep_param=args.param,
             sweep_value=gen_kwargs[args.param],
             index=i,
+            output_dir=output_dir,
         )
         sf.write(filepath, output.numpy().T, sample_rate)
         print(f"    -> saved {filepath}")
@@ -174,6 +180,14 @@ def main():
     if args.match_source_length and not args.init_audio:
         print("Warning: --match-source-length has no effect without --init-audio; ignoring.")
 
+    if args.outdir:
+        run_output_dir = args.outdir
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        folder_name = f"sweep_{args.param}_{timestamp}"
+        run_output_dir = os.path.join(OUTPUT_DIR, folder_name)
+    os.makedirs(run_output_dir, exist_ok=True)
+
     # Resolve --init-audio to a list of individual file paths (or [None] for text-to-audio).
     if args.init_audio and os.path.isdir(args.init_audio):
         audio_paths = collect_audio_files(args.init_audio)
@@ -185,6 +199,7 @@ def main():
         audio_paths = [None]
         print("Mode: text-to-audio")
 
+    print(f"Output: {run_output_dir}")
     print(f"Sweeping '{args.param}' over {args.n} values: "
           f"{sweep_values[0]} -> {sweep_values[-1]}")
     print("=" * 60)
@@ -203,11 +218,12 @@ def main():
             args=args,
             sweep_values=sweep_values,
             init_audio_path=audio_path,
+            output_dir=run_output_dir,
         )
 
     total = args.n * len(audio_paths)
     print("=" * 60)
-    print(f"Done. {total} files written to Audio/output/")
+    print(f"Done. {total} files written to {run_output_dir}")
 
 
 if __name__ == "__main__":
