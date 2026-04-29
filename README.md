@@ -19,9 +19,9 @@ source venv/bin/activate    # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
 # Download a model (requires HF authentication — run `huggingface-cli login` first)
-python downloadModelSmall.py   # ~400 MB small model
+python setup/downloadModelSmall.py   # ~400 MB small model
 # or
-python downloadModel.py        # larger model (~3 GB)
+python setup/downloadModel.py        # larger model (~3 GB)
 ```
 
 ## Scripts
@@ -33,13 +33,13 @@ Supports two modes depending on whether `--indir` is provided.
 **Text-to-audio** — generate audio from a prompt:
 
 ```bash
-python sampleReplace.py --prompt "solo violin music" -n 3 --duration 10
+python python/sampleReplace.py --prompt "solo violin music" -n 3 --duration 10
 ```
 
 **Audio-to-audio** — restyle existing audio files guided by a prompt:
 
 ```bash
-python sampleReplace.py --indir my_samples --prompt "warm analog pad" --noise-level 0.3
+python python/sampleReplace.py --indir my_samples --prompt "warm analog pad" --noise-level 0.3
 ```
 
 The `--noise-level` flag (0–1) controls how much the output departs from the original:
@@ -53,7 +53,7 @@ The `--noise-level` flag (0–1) controls how much the output departs from the o
 Per-file prompts can be supplied via a JSON map:
 
 ```bash
-python sampleReplace.py --indir my_samples --prompt-file prompts.json
+python python/sampleReplace.py --indir my_samples --prompt-file prompts.json
 ```
 
 <details>
@@ -82,16 +82,16 @@ Generates multiple outputs while linearly sweeping a single parameter (e.g. `cfg
 
 ```bash
 # Sweep CFG scale from 0 to 15 in 5 steps
-python interpolateGen.py --prompt "warm analog pad" --param cfg_scale --start 0 --end 15 -n 5
+python python/interpolateGen.py --prompt "warm analog pad" --param cfg_scale --start 0 --end 15 -n 5
 
 # Audio-to-audio: sweep noise level on an input file
-python interpolateGen.py --init-audio my_loop.wav --prompt "dreamy pads" --param init_noise_level --start 0.1 --end 0.9 -n 5
+python python/interpolateGen.py --init-audio my_loop.wav --prompt "dreamy pads" --param init_noise_level --start 0.1 --end 0.9 -n 5
 
 # Batch audio-to-audio: sweep across every file in a folder
-python interpolateGen.py --init-audio my_samples/ --prompt "dreamy pads" --param init_noise_level --start 0.1 --end 0.9 -n 5
+python python/interpolateGen.py --init-audio my_samples/ --prompt "dreamy pads" --param init_noise_level --start 0.1 --end 0.9 -n 5
 
 # Trim outputs to match each source file's duration
-python interpolateGen.py --init-audio my_samples/ --prompt "dreamy pads" --param init_noise_level --start 0.1 --end 0.9 -n 5 --match-source-length
+python python/interpolateGen.py --init-audio my_samples/ --prompt "dreamy pads" --param init_noise_level --start 0.1 --end 0.9 -n 5 --match-source-length
 ```
 
 <details>
@@ -120,18 +120,18 @@ python interpolateGen.py --init-audio my_samples/ --prompt "dreamy pads" --param
 Minimal script to verify the model loads and generates output.
 
 ```bash
-python testGen.py
-python testGen.py --model stable-audio-open
+python python/testGen.py
+python python/testGen.py --model stable-audio-open
 ```
 
 ### Utility modules
 
 | Script                  | Purpose                                                                                                  |
 | ----------------------- | -------------------------------------------------------------------------------------------------------- |
-| `audio_utils.py`        | Shared model loading and audio post-processing (used by all generation scripts)                          |
-| `output_naming.py`      | Centralized output naming — all scripts write to `Audio/output/` with descriptive, timestamped filenames |
-| `downloadModel.py`      | Downloads `stable-audio-open-1.0` (large model) from Hugging Face                                        |
-| `downloadModelSmall.py` | Downloads `stable-audio-open-small` from Hugging Face                                                    |
+| `python/audio_utils.py`        | Shared model loading and audio post-processing (used by all generation scripts)                          |
+| `python/output_naming.py`      | Centralized output naming — all scripts write to `Audio/output/` with descriptive, timestamped filenames |
+| `setup/downloadModel.py`      | Downloads `stable-audio-open-1.0` (large model) from Hugging Face                                        |
+| `setup/downloadModelSmall.py` | Downloads `stable-audio-open-small` from Hugging Face                                                    |
 
 ## Notes on models
 

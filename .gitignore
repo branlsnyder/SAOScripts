@@ -24,3 +24,7 @@ bwoosnydToken read.txt
 *.pth
 *.safetensors
 *.bin
+
+# Somax corpus data & bundled zip
+SomaxCorpusWork/Corpora/
+SomaxCorpusWork/Somax-Documentation/Somax2-master.zip
