@@ -21,8 +21,8 @@ AUDIO_FILE="SomaxCorpusWork/Corpora/MutliCorpus3_gecVox/gecVoxFull_no_silence.wa
 PICKLE_FILE="SomaxCorpusWork/Corpora/MutliCorpus3_gecVox/gecVoxFull_no_silence.pickle"
 SEGMENTS_DIR="SomaxCorpusWork/Corpora/MutliCorpus3_gecVox/gecVoxFull_no_silenceSegments"
 PROMPT_FILE="scripts/gecVoxFull_prompts.json"
-MAX_SEGMENTS="5"  # leave empty for all segments, or set e.g. "5" for quick iteration
-SWEEP_N=5  # init_noise_level samples; must match --noise-levels in step 3
+MAX_SEGMENTS="40"  # leave empty for all segments, or set e.g. "5" for quick iteration
+SWEEP_N=10  # init_noise_level samples; must match --noise-levels in step 3
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 
 
@@ -88,7 +88,7 @@ for ((i=0; i<NUM_PROMPTS; i++)); do
         --prompt "$PROMPT" \
         --outdir "$OUTDIR" \
         --param init_noise_level \
-        --start 0.6 \
+        --start 0.3 \
         --end 0.9 \
         -n "$SWEEP_N" \
         --steps 15 \
