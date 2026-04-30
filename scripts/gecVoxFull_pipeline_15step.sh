@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# alto_recorder_pipeline.sh
+# gecVoxFull_pipeline.sh
 #
 # Three-stage pipeline:
 #   1. Segment a Somax2 corpus into individual WAV files
@@ -9,7 +9,7 @@
 #        3. Organize outputs by noise level and concatenate
 #
 # Usage:
-#   bash scripts/alto_recorder_pipeline.sh
+#   bash scripts/gecVoxFull_pipeline.sh
 
 set -euo pipefail
 
@@ -17,12 +17,12 @@ PROJ_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJ_ROOT"
 
 # --- Paths ---
-AUDIO_FILE="SomaxCorpusWork/Corpora/MultiCorpus2_alto-rec/alto_recorder_UNT.wav"
-PICKLE_FILE="SomaxCorpusWork/Corpora/MultiCorpus2_alto-rec/alto_recorder_UNT.pickle"
-SEGMENTS_DIR="SomaxCorpusWork/Corpora/MultiCorpus2_alto-rec/alto_recorder_UNTSegments"
-PROMPT_FILE="scripts/alto_recorder_prompts.json"
+AUDIO_FILE="SomaxCorpusWork/Corpora/MutliCorpus3_gecVox/gecVoxFull_no_silence.wav"
+PICKLE_FILE="SomaxCorpusWork/Corpora/MutliCorpus3_gecVox/gecVoxFull_no_silence.pickle"
+SEGMENTS_DIR="SomaxCorpusWork/Corpora/MutliCorpus3_gecVox/gecVoxFull_no_silenceSegments"
+PROMPT_FILE="scripts/gecVoxFull_prompts.json"
 MAX_SEGMENTS="5"  # leave empty for all segments, or set e.g. "5" for quick iteration
-SWEEP_N=2  # init_noise_level samples; must match --noise-levels in step 3
+SWEEP_N=5  # init_noise_level samples; must match --noise-levels in step 3
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 
 
@@ -91,7 +91,7 @@ for ((i=0; i<NUM_PROMPTS; i++)); do
         --start 0.6 \
         --end 0.9 \
         -n "$SWEEP_N" \
-        --steps 2 \
+        --steps 15 \
         --cfg_scale 1 \
         --sampler_type pingpong \
         --match-source-length

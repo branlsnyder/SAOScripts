@@ -22,6 +22,7 @@ PICKLE_FILE="SomaxCorpusWork/Corpora/MultiCorpus2_alto-rec/alto_recorder_UNT.pic
 SEGMENTS_DIR="SomaxCorpusWork/Corpora/MultiCorpus2_alto-rec/alto_recorder_UNTSegments"
 PROMPT_FILE="scripts/alto_recorder_prompts.json"
 MAX_SEGMENTS="5"  # leave empty for all segments, or set e.g. "5" for quick iteration
+SWEEP_N=2  # init_noise_level samples; must match --noise-levels in step 3
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 
 
@@ -89,7 +90,7 @@ for ((i=0; i<NUM_PROMPTS; i++)); do
         --param init_noise_level \
         --start 0.6 \
         --end 0.9 \
-        -n 2 \
+        -n "$SWEEP_N" \
         --steps 15 \
         --cfg_scale 1 \
         --sampler_type pingpong \
@@ -101,7 +102,7 @@ for ((i=0; i<NUM_PROMPTS; i++)); do
 
     python3 SomaxCorpusWork/pythonScripts/workflow_noise_level_concat.py \
         "$OUTDIR" \
-        --noise-levels 2
+        --noise-levels "$SWEEP_N"
 
 done
 
