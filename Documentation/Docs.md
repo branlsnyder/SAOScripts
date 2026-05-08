@@ -213,6 +213,39 @@ python python/testGen.py --model stable-audio-open
 
 ---
 
+## segment_audio.py
+
+Splits a single audio file into **equal-duration core regions**, where each core is **at most** `--max-seconds` long. This is not model inference: it only reads/writes audio with [SoundFile](https://python-soundfile.readthedocs.io/) and NumPy.
+
+### How it works
+
+1. Computes how many segments are needed: `ceil(total_duration / effective_max)`, where `effective_max` is `--max-seconds` minus twice the overlap (in seconds) when `--overlap-ms` is set.
+2. Divides the file into that many **equal** core lengths (`total_duration / num_segments`). Each core is never longer than `effective_max` (hence never longer than `--max-seconds` when overlap is zero), but cores are often **shorter** than the cap—for example, a 95 s file with `--max-seconds 10` yields ten segments of 9.5 s each, while the same file with the default `--max-seconds 11` yields nine segments of about 10.56 s each.
+3. Writes each segment to a new file. With `--overlap-ms > 0`, each written file includes extra audio before and after the core (padded with silence at the file edges) for crossfade-style workflows.
+
+Outputs go to `--output-dir` if set; otherwise a folder named `{stem}_segments_{timestamp}` next to the input file.
+
+### Usage examples
+
+```bash
+python python/segment_audio.py long_take.wav
+
+python python/segment_audio.py long_take.wav --max-seconds 10 --output-dir segments/
+
+python python/segment_audio.py long_take.wav --max-seconds 11 --overlap-ms 50
+```
+
+### Options reference
+
+| Flag             | Default | Description                                                                                     |
+| ---------------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `input`          | _(required)_ | Path to the input audio file (formats supported by SoundFile)                             |
+| `--max-seconds`  | `11`    | Maximum core duration per segment in seconds (segments may be shorter; see above)              |
+| `--overlap-ms`   | `0`     | Half-overlap-style padding: milliseconds of audio included on **each side** of every core segment |
+| `--output-dir`   | _(none)_ | Output directory (default: `<input_stem>_segments_<YYYYMMDD_HHMMSS>/` beside the input)        |
+
+---
+
 ## Utility Modules
 
 | Module                       | Purpose                                                                                          |

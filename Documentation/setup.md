@@ -59,6 +59,7 @@ StableAudioWorkspace/
 │   ├── sampleReplace.py      # Batch audio generation
 │   ├── interpolateGen.py     # Parameter sweep generation
 │   ├── testGen.py            # Smoke test
+│   ├── segment_audio.py      # Split a file into equal-length segments (max duration cap)
 │   ├── audio_utils.py        # Shared model loading and post-processing
 │   └── output_naming.py      # Centralized output naming convention
 ├── scripts/                  # Shell pipeline scripts
