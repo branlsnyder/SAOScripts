@@ -1,10 +1,18 @@
 # Project evolution — first-person session log
 
-I’m writing this for you like I’d explain it across the table: session by session, what I changed, **what audio went in and out**, **exact prompts**, and **commands you could paste**. My corpus and renders still live under `**Audio/`** and `**SomaxCorpusWork/Corpora/**` (gitignored), so you won’t see the WAV bytes in Git—only paths and filenames as I wired them into scripts.
+<!-- Subjective “why” lines use Markdown blockquotes (`> …`) so they stay visible in Cursor preview and plain Markdown viewers without HTML/CSS. -->
 
-Across pipelines I kept the same choreography: `**segment_corpus.py**` peels a Somax2 `**.wav` + `.pickle**` into segment WAVs, `**python/interpolateGen.py**` does an `**init_noise_level` sweep** in audio-to-audio mode with `**--match-source-length`**, and `**workflow_noise_level_concat.py**` buckets by noise tier and emits `**concatenated/1_noise_level-….wav**`-style mixes. Outputs land under `**Audio/output/…**` with names `**python/output_naming.py**` builds (tiny model tag `**sm**`, `**s15**` for fifteen steps, `**pp**` for ping-pong sampler, timestamps, etc.—you’ve seen `**wail-augmented-5xstr_sm_swinit_noise_level-0.6_nl0.6_s15_cfg1_pp_d11_***` style files when you run the wail rigs).
+I’m writing this for you like I’d explain it across the table: session by session, what I changed, **what audio went in and out**, **exact prompts**, and **commands you could paste**. My corpus and renders still live under **`Audio/`** and **`SomaxCorpusWork/Corpora/`** (gitignored), so you won’t see the WAV bytes in Git—only paths and filenames as I wired them into scripts.
 
-Stable Audio pulls `**stabilityai/stable-audio-open-small**` in my traces at **44.1 kHz** with a reported cap near **11.89 s**; my wail clips sit around **~10 s** so `**--match-source-length`** trims generations back before concat. On CPU I always get benign noise: `**flash_attn` optional**, `**torch.cuda.amp` disabled**, `**clip`** nagging about `**pkg_resources**`.
+> **Why:** I wanted a written trail you (or future me) can follow without staring at blobs in Git—I care more about repeatable routing than checking in gigabytes.
+
+Across pipelines I kept the same choreography: **`SomaxCorpusWork/pythonScripts/segment_corpus.py`** peels a Somax2 **`.wav` + `.pickle`** into segment WAVs, **`python/interpolateGen.py`** does an **`init_noise_level` sweep** in audio-to-audio mode with **`--match-source-length`**, and **`SomaxCorpusWork/pythonScripts/workflow_noise_level_concat.py`** buckets by noise tier and emits **`concatenated/1_noise_level-….wav`**-style mixes. Outputs land under **`Audio/output/…`** with names **`python/output_naming.py`** builds (`sm` small model tag, **`s15`** steps, **`pp`** sampler, timestamps—files like **`wail-augmented-5xstr_sm_swinit_noise_level-0.6_nl0.6_s15_cfg1_pp_d11_*`** when you run the wail rigs).
+
+> **Why:** One mental model beats re-learning each script; chaining the same steps made batch listening comparable across corpora rather than reinventing filenames or folder shapes every week.
+
+Stable Audio pulls **`stabilityai/stable-audio-open-small`** in my traces at **44.1 kHz** with a reported cap near **11.89 s**; my wail clips sit around **~10 s** so **`--match-source-length`** trims generations before concat. On CPU I get benign stderr: **`flash_attn`** optional, **`torch.cuda.amp`** disabled without CUDA, **`clip`** nagging about **`pkg_resources`**.
+
+> **Why:** I cared that outputs line up temporally across segments—I didn’t want the model pad/trunc guesses to spoil A/B-ing noise tiers by length alone.
 
 Below, **Git** hashes are breadcrumbs if you want to bisect—the story is chronological.
 
@@ -12,93 +20,127 @@ Below, **Git** hashes are breadcrumbs if you want to bisect—the story is chron
 
 ### Session — April 21, morning (cold start)
 
-I stood the repo up with the Python CLIs `**interpolateGen.py`**, `**sampleReplace.py**`, `**testGen.py**`, `**output_naming.py**`, `**downloadModel.py**`, `**downloadModelSmall.py**`, `**requirements.txt**`, plus `**Docs.md**`. I checked in `**2505.08175v3.pdf**` (later renamed `**stableAudioOpenSmall_Paper.pdf**` in `**Documentation/**`). I set `**.gitignore**` so `**Audio/**`, `***.wav**`, model weights, and secrets stay local, and `**.gitattributes**` for sane line endings.
+I stood the repo up with the Python CLIs **`interpolateGen.py`**, **`sampleReplace.py`**, **`testGen.py`**, **`python/output_naming.py`**, **`setup/downloadModel.py`**, **`setup/downloadModelSmall.py`**, **`requirements.txt`**, plus docs as **`Docs.md`**. I checked in **`2505.08175v3.pdf`** (later renamed **`stableAudioOpenSmall_Paper.pdf`** under **`Documentation/`**). I set **`.gitignore`** so **`Audio/`**, **`*.wav`**, model weights, and secrets stay local, and **`.gitattributes`** for sane line endings.
 
-**Commands you’d still use:** after a venv, `pip install -r requirements.txt` (later superseded partly by `**pyproject.toml`**), then e.g. `python setup/downloadModelSmall.py` or `python setup/downloadModel.py` with Hugging Face auth.
+> **Why:** I needed a reproducible Stable Audio toolbox first; the PDF kept the small-model rationale one click away; ignoring audio/weights avoids slow clones and leaked paths.
+
+**Commands you’d still use:** after a venv, `pip install -r requirements.txt` (later partly superseded by **`pyproject.toml`**), then e.g. `python setup/downloadModelSmall.py` or `python setup/downloadModel.py` with Hugging Face auth.
+
+> **Why:** Download scripts document the HF contract explicitly so I wasn’t reinventing **`from_pretrained`** quirks every reinstall.
 
 *(Git: `622a0cf`)*  
 
-I also slipped in an agent-oriented Hugging Face skill under `**.agents/skills/hf-cli/*`* · *(Git: `2f052e3`)*
+I slipped in an agent-oriented Hugging Face skill under **`.agents/skills/hf-cli/`** (linked from **`.claude/skills/hf-cli`**).
+
+> **Why:** Agents keep asking me to automate Hub pulls—I wanted tooling text co-located with the repo rather than scribbled elsewhere.
+
+*(Git: `2f052e3`)*
 
 ---
 
 ### Session — April 21 (README and packaging)
 
-I wrote `**README.md*`* so cloning is obvious—clone, `**python -m venv venv**`, `**source venv/bin/activate**`, install, pull a model `**setup/downloadModelSmall.py**` / `**setup/downloadModel.py**`, run `**python/python/sampleReplace.py**` or `**python/python/interpolateGen.py**`. Examples I still rely on verbally:
+I wrote **`README.md`** so cloning is obvious—venv, install, **`setup/downloadModel*.py`**, **`python/sampleReplace.py`**, **`python/interpolateGen.py`**. Examples I still cite:
 
 ```bash
 python python/sampleReplace.py --prompt "solo violin music" -n 3 --duration 10
 python python/sampleReplace.py --indir my_samples --prompt "warm analog pad" --noise-level 0.3
 ```
 
-*(Git: `9563c19`)*
+> **Why:** Future me forgets invocation order; pasted commands shorten the shame spiral when I return after months.
 
-Then I formalized `**pyproject.toml*`* (`stable-audio-scripts`, `**stable-audio-tools==0.0.19**`, Python ≥3.11), centralized inference bits in `**python/audio_utils.py**`, and tightened `**python/output_naming.py**` and `**--outdir**`.
+*(Git: `9563c19`)*  
+
+I formalized **`pyproject.toml`** (`stable-audio-scripts`, **`stable-audio-tools==0.0.19`**, Python ≥3.11), centralized inference in **`python/audio_utils.py`**, and tightened **`python/output_naming.py`** and **`--outdir`** behavior.
+
+> **Why:** Copy-pasting four near-identical loaders was brittle; pinning deps plus one shared naming module kept runs explainable (“same flags → same basename tokens”).
 
 *(Git: `704cf9b`, `43cd100`)*  
 
-Later, over Cursor, I dug through `**generate_diffusion_cond*`* in `**python/testGen.py**` with someone— `**6788a62e-b6df-467e-92a6-a1da34378716**`.
+Over Cursor someone asked how **`generate_diffusion_cond`** works inside **`python/testGen.py`** (transcript **`6788a62e-b6df-467e-92a6-a1da34378716`**).
+
+> **Why:** I treat **`testGen.py`** as a telescope into the sampler—walking it beat reading raw library source cold.
 
 ---
 
 ### Session — April 23 (folder batch interpolation)
 
-I taught `**python/interpolateGen.py**` to take `**--init-audio**` as either a single file **or an entire folder** so I could sweep `**init_noise_level`** across every corpus clip without reloading weights between files.
+I taught **`python/interpolateGen.py`** to accept **`--init-audio`** as either a single file **or a folder**, sweeping **`init_noise_level`** across every clip without reloading weights between inputs.
+
+> **Why:** My Somax-derived folders routinely hold tens of shorts—folder mode turned “research afternoon” into one load, many sweeps, less thrash waiting on Torch init.
 
 *(Git: `effa002`)*  
 
-Example shape I still narrate aloud:
+Example I still shout into the void:
 
 ```bash
 python python/interpolateGen.py --init-audio my_samples/ --prompt "dreamy pads" \
   --param init_noise_level --start 0.1 --end 0.9 -n 5 --match-source-length
 ```
 
+> **Why:** This snippet is how I audition “how chaotic can this corpus get?” without rewriting Python each time.
+
 ---
 
 ### Session — April 29 (segments without the model)
 
-I added `**python/segment_audio.py**` for non-Somax chopping—equal cores up to `**--max-seconds**` (default ties to Stable Audio horizons), optional overlap `**--overlap-ms**`:
+I added **`python/segment_audio.py`** for chopping **outside** Somax—equal-duration cores capped by **`--max-seconds`** (default aligns with Stable Audio horizons), optional **`--overlap-ms`**:
 
 ```bash
 python python/segment_audio.py long_take.wav --max-seconds 11 --output-dir segments/
 ```
 
-**Audio path:** arbitrary long input `**long_take.wav`**, outputs land beside it or under `**segments/**`.
+> **Why:** Some sources never touch Somax2; I still needed clip lengths the small model happily ingests instead of babysitting trims by hand.
 
-*(Git: `10b7feb`)*
+**Audio path:** arbitrary **`long_take.wav`**, outputs beside the file or **`segments/`**.
+
+*(Git: `10b7feb`)*  
 
 ---
 
 ### Session — April 29 (Somax tooling + first shell pipelines)
 
-I moved Python into `**python/*`*, installers into `**setup/**`, slid `**Docs.md**` into `**Documentation/Docs.md**`, and ported **SomaxCorpusWork**—`**segment_corpus.py`**, `**concat_segments.py**`, `**organize_by_noise_level.py**`, `**workflow_batch_concat.py**`, `**workflow_noise_level_concat.py**`, plus corpus notes PDFs/PDF user guide/`maxpat`.
+I moved Python under **`python/`**, installers **`setup/`**, **`Docs.md` → `Documentation/Docs.md`**, and ported **SomaxCorpusWork** (`segment_corpus.py`, `concat_segments.py`, `organize_by_noise_level.py`, `workflow_*`, corpus PDF/PDF/maxpat stash).
 
-I authored `**scripts/alto_recorder_pipeline.sh**` chaining:
+> **Why:** The Somax-derived automation deserved first-class citizenship next to Stable Audio—not a dangling folder—and flat **`python/`** keeps imports sane for shell wrappers.
 
-**Inputs:** `**SomaxCorpusWork/Corpora/MultiCorpus2_alto-rec/alto_recorder_UNT.wav`** + `**alto_recorder_UNT.pickle**` → `**alto_recorder_UNTSegments/**`  
-**Prompts:** JSON array `**scripts/alto_recorder_prompts.json`** (eight lines: alto recorder warmth, ethereal winds, dubstep growl, distressed countertenor wail, dry jazz drums, techno kit, fiddle, metal Wall).  
-**Generation:** `**interpolateGen.py`** with `**--start 0.6**` `**--end 0.9**`, `**-n 2**` (two `**init_noise_level**` stops—I keep `**SWEEP_N**` matching `**workflow_noise_level_concat.py --noise-levels**`), `**--steps 2**`, `**--match-source-length**`  
-**Outputs:** per-prompt dirs `**Audio/output/prompt##_sweep_init_noise_level_<timestamp>/`**, concat under each folder’s `**concatenated/**`  
-**Kickoff:**
+I authored **`scripts/alto_recorder_pipeline.sh`**:
+
+**Inputs:** **`SomaxCorpusWork/Corpora/MultiCorpus2_alto-rec/alto_recorder_UNT.wav`** + **`alto_recorder_UNT.pickle`** → **`alto_recorder_UNTSegments/`**  
+
+> **Why:** That alto recorder corpus was my first guinea pig stitching Somax segmentation to Stable Audio resynthesis—I needed an end-to-end proof before scaling to bigger choirs/noise.
+
+**Prompts:** **`scripts/alto_recorder_prompts.json`** (eight lines: alto recorder warmth, airy winds, dub growl, distressed countertenor wail, dry jazz drums, techno kit, fiddle, metal barrage).
+
+> **Why:** I wanted a terse prompt palette mirroring sonic directions I audition for that instrument—dense enough for contrast, short enough that JSON stayed human-editable.
+
+**Generation:** **`interpolateGen.py`** **`--start 0.6` `--end 0.9`**, **`-n 2`**, **`--steps 2`**, **`--match-source-length`**, tying **`SWEEP_N`** to **`workflow_noise_level_concat.py --noise-levels`**  
+
+> **Why:** I prioritized quick smoke tests (**`steps 2`, two noise taps**) early; aligning **`SWEEP_N`** avoids silent mismatches (“where’s the tenth folder?” dramas).
+
+**Outputs:** **`Audio/output/prompt##_sweep_init_noise_level_<timestamp>/`** with **`concatenated/`**.
 
 ```bash
 bash scripts/alto_recorder_pipeline.sh
 ```
 
-Later I cloned the pattern as `**scripts/alto_recorder_pipeline_15step.sh**` where the only substantive change was `**--steps 15**` on `**interpolateGen.py**`.
+Later **`scripts/alto_recorder_pipeline_15step.sh`** bumps **`interpolateGen.py`** to **`--steps 15`**.
 
-*(Git: `f9ccbc3`, `**Documentation/*`* stabilized in `acb269a`, alto 15-step in `8322e83`)*  
+> **Why:** Once smoke tests behaved, richer diffusion steps tightened textures without rewriting the choreography.
 
-I drafted `**Documentation/shell_scripts.md*`*, `**setup.md**`, `**noise_level_vs_steps.md**` to explain `**SWEEP_N` vs `-n**` and why `**--noise-levels**` must track.
+*(Git: `f9ccbc3`, **`Documentation/`** stabilized `acb269a`, alto variant `8322e83`)*  
+
+I drafted **`Documentation/shell_scripts.md`**, **`Documentation/setup.md`**, **`Documentation/noise_level_vs_steps.md`**.
+
+> **Why:** I kept confusing **diffusion steps** with **noise levels** verbally—writing the distinction down reduced self-sabotage when tuning envelopes.
 
 ---
 
 ### Session — April 29 (silence remover)
 
-Someone asked Cursor for preprocessing that strips silence longer than `**--min-silence**` (default **1 s**) before corpus work. I landed `**SomaxCorpusWork/pythonScripts/remove_silence.py`**—standard-library WAV slicing, `**--threshold**`, folder mode with `**--outdir**`.
+Someone (via Cursor **`dec890f7-…`**) requested preprocessing stripping silence longer than **`--min-silence`** (default **1 s**). **`SomaxCorpusWork/pythonScripts/remove_silence.py`** landed—stdlib WAV slicing, thresholds, directories.
 
-**Example shim before segmentation:**
+> **Why:** Long dead air in Somax exports wasted segment budget and exaggerated “model invents tails” artefacts—I wanted corpuses lean before pickles drive segmentation.
 
 ```bash
 python3 SomaxCorpusWork/pythonScripts/remove_silence.py \
@@ -107,15 +149,21 @@ python3 SomaxCorpusWork/pythonScripts/remove_silence.py \
   --min-silence 1.0
 ```
 
-*(Git: `0a217ab` · Cursor thread `dec890f7-4bb7-43cb-838b-2c11f4d15e4d`)*
+*(Git: `0a217ab`)*
 
 ---
 
 ### Session — April 30 (concat edge cases, PC playbook, heavy GEC rigs)
 
-Git `**0f5e769*`* expanded `**SomaxCorpusWork/pythonScripts/concat_segments.py**`—when `**segment*.wav**` doesn’t glob, sort lexically instead—and I wrote `**Documentation/pc_setup.md**` after I spelled out Dropbox + GitHub splits with you: code repo on Git, `**Audio/**` outside on Dropbox, Git Bash `**bash scripts/…**` on Windows overnight.
+**`SomaxCorpusWork/pythonScripts/concat_segments.py`** now sorts lexically if **`segment*.wav`** misses.
 
-Concurrently `**scripts/gecVoxFull_pipeline_15step.sh**` hard-wires `**MutliCorpus3_gecVox/gecVoxFull_no_silence.wav**` + `**.pickle**` → `**gecVoxFull_no_silenceSegments/**`, `**scripts/gecVoxFull_prompts.json**` (**autotune**, airy orchestral, dub bass, distressed male wail, woody jazz drums, techno kit, scratchy fiddle, extreme metal sweep), `**MAX_SEGMENTS=40`**, `**SWEEP_N=10**` (so `**init_noise_level` sweep 0.3→0.9 with ten taps**):
+> **Why:** Interpolation renames scrambled the simple glob—falling back to deterministic sorting rescues overnight renders instead of silently wrong stitch order.
+
+I wrote **`Documentation/pc_setup.md`** after hashing out Dropbox/GitHub splits: repo on Git, **`Audio/`** on Dropbox/Git Bash **`bash`** on Windows overnight.
+
+> **Why:** My Mac churns drafts; my PC brute-forces batches—I needed a playbook so both machines agree without Sync conflicts eating half-written WAV directories.
+
+**`scripts/gecVoxFull_pipeline_15step.sh`** targets **`SomaxCorpusWork/Corpora/MutliCorpus3_gecVox/gecVoxFull_no_silence.{wav,pickle}` → `gecVoxFull_no_silenceSegments/`**, **`scripts/gecVoxFull_prompts.json`** (autotune, airy orchestral, dub bass, male wail, jazz drums, techno kit, fiddle, extreme metal), **`MAX_SEGMENTS=40`**, **`SWEEP_N=10`** ( **`init_noise_level` 0.3→0.9**):
 
 ```bash
 python3 python/interpolateGen.py \
@@ -131,15 +179,25 @@ python3 python/interpolateGen.py \
 python3 SomaxCorpusWork/pythonScripts/workflow_noise_level_concat.py "$OUTDIR" --noise-levels 10
 ```
 
-I patched pipeline paths `**90bfa96**` and, while a run spun, tweaked noise-bin counts so `**--noise-levels**` always matched interpolate `**-n**`— `**1bd86662-f3f2-40b9-b02a-fd886e02448b**`.
+> **Why:** GEC vox corpus needed more granularity than alto smoke tests—ten noise tiers let me audition “barely recognizable” versus “barely tethered,” and wider **0.3** start leaned into drama earlier.
 
-`**scripts/gecVoxFullSMALL_pipeline_15step.sh**` is the variant pointed at `**gecVoxFull_no_silenceSegmentsSmall**`; as checked in, STEP 1’s `**AUDIO_FILE**` lines are **commented**—I personally treat it as **“reuse a prebuilt small segment folder.”**
+Path fix **`90bfa96`**; mid-run tweaks ensuring **`workflow_noise_level_concat.py --noise-levels`** matches **`-n`** (transcript **`1bd86662-…`**).
+
+> **Why:** When counts drift, step three invents heartbreaking empty folders—you caught that mismatch live; aligning flags was cheaper than hallucinating QA patience.
+
+**`scripts/gecVoxFullSMALL_pipeline_15step.sh`** points at **`gecVoxFull_no_silenceSegmentsSmall`** while STEP 1 **`AUDIO_FILE` lines stay commented—as checked in I treat it as “pre-segmented small folder only.”**
+
+> **Why:** I sometimes shrink segment sets offline; flipping comments every time annoyed me enough to commit a deliberately “continuation-only” harness.
+
+*(Git core: `0f5e769`)*
 
 ---
 
 ### Session — April 30 (pad everything to one reference duration)
 
-Someone needed every clip in `**MutliCorpus3_gecVox/…butterfly-sweep**` padded to `**gecVoxFull_no_silence.wav`’**s length. `**SomaxCorpusWork/pythonScripts/pad_to_reference_duration.py`** does that now:
+Butterfly-sweep segments needed padding to **`gecVoxFull_no_silence.wav`** length—**`SomaxCorpusWork/pythonScripts/pad_to_reference_duration.py`**.
+
+> **Why:** Downstream Stable Audio listens for uniform timing; drifting lengths meant crossfades lied—padding/trunc anchors kept comparisons honest.
 
 ```bash
 python SomaxCorpusWork/pythonScripts/pad_to_reference_duration.py \
@@ -148,40 +206,49 @@ python SomaxCorpusWork/pythonScripts/pad_to_reference_duration.py \
   --outdir SomaxCorpusWork/Corpora/MutliCorpus3_gecVox/padded_out
 ```
 
-*(Git: `b6a59c7` · spec chat `182f785d-8729-473f-b6ef-40ca1fedd1c8`)*
+*(Git: `b6a59c7`)*
 
 ---
 
 ### Session — April 30 (human ops)
 
-We talked through closing a laptop lid during long bash pipelines—mostly “sleep freezes work; park it on desktop / `caffeinate` etc.” (`**ce30ed9e-db89-4561-8921-3f0883220ff1*`*). No code moved.
+We chatted about laptop lids freezing bash (**`ce30ed9e-…`**)—no repo diff. Somax region filter questions floated in **`06f1d909-…`**.
 
-Somax-region Max questions lived in `**06f1d909-f0bb-4688-add8-6e9c56f79ec6**`.
+> **Why:** Logistics and MaxMSP literacy still gate whether these scripts survive real life—even when no LOC moved.
 
 ---
 
-### Session — May 8 (finally documented `segment_audio`)
+### Session — May 8 (document `segment_audio`)
 
-I spelled out `**python/segment_audio.py**` inside `**Documentation/Docs.md**` after you asked whether the ten-ish-second splitter was written down (`**95cc9eb5-7696-4c9e-9e78-40142282a7d1**`).
+Documented **`python/segment_audio.py`** inside **`Documentation/Docs.md`** after you wondered if that helper was written down (**`95cc9eb5-…`**).
+
+> **Why:** If only I memorized argparse—Docs prevent “wait, wasn’t there a splitter?” archaeology.
 
 *(Git: `f9639c1`)*
 
 ---
 
-### Session — May 8 (the wail rigs + what I actually ran)
+### Session — May 8 (wail rigs + runs I logged)
 
-I checked in `**scripts/WailStretchSMALL_pipeline_curated.sh*`* and `**scripts/WailStretchSMALL_pipeline.sh**`. Conceptually:
+Committed **`scripts/WailStretchSMALL_pipeline_curated.sh`** and **`scripts/WailStretchSMALL_pipeline.sh`**.
 
-**Corpus notion:** `**MultiCorpus4_wail`** with segments under `**SomaxCorpusWork/Corpora/MultiCorpus4_wail/Segments_wail_augmented_5xStretched**` (clips like `**wail_augmented_5xStretched_seg001.wav` …**)  
-**Prompt JSONs:**
+**Corpus notion:** **`SomaxCorpusWork/Corpora/MultiCorpus4_wail/Segments_wail_augmented_5xStretched`** (clips like **`wail_augmented_5xStretched_seg001.wav`**)
 
-- `**scripts/stable_audio_prompts_curated.json`** — forty-three long Stable-Audio-ish descriptions (genre/Mood/SFX-spanning—from thrash hybrids to orchestral cues to ringtone mocks).  
-- `**scripts/wailStretch_prompts.json**` / `**scripts/wailStretch_prompts_2.json**` — seven shorter lines each; **_2** appends `**300 BPM`** to every string for experimentation.
+> **Why:** That stretched wail corpus is my stress-test for extremes—textures already pushed so Stable Audio deviations read clearly.
 
-Curated runner points `**PROMPT_FILE="scripts/stable_audio_prompts_curated.json"**`. The non-curated file I last saved points `**scripts/wailStretch_prompts_2.json**` and nests `**OUTDIR="Audio/output/wailStretch300BPMtest/prompt##_…"**`.
+**Prompt libraries:**
 
-**Sweep parameters I standardized there:** `**init_noise_level`** from **0.6→0.9**, `**SWEEP_N=3`** (ties `**workflow_noise_level_concat.py --noise-levels 3**`), `**--steps 15**`, `**--match-source-length**`, `**--sampler_type pingpong**`  
-**Representative interpolate block:**
+- **`scripts/stable_audio_prompts_curated.json`** — forty-three long genre/SFX hybrids (thrash to spa pads to smartphone ringtones).  
+> **Why:** Wide prompt net stress-tests sonic diversity while keeping Stable Audio specificity high—listening fatigue told me terse prompts wasted compute.
+- **`scripts/wailStretch_prompts.json`** / **`wailStretch_prompts_2.json`** — seven short lines each; **`_2`** suffixes **`300 BPM`** everywhere.  
+
+> **Why:** I wanted apples-to-apples “tempo tag” experiments without rewriting prose—seven prompts stays finishable overnight.
+
+Curated **`PROMPT_FILE="scripts/stable_audio_prompts_curated.json"`**; alternate script binds **`wailStretch_prompts_2.json`** and nests outputs **`Audio/output/wailStretch300BPMtest/prompt##_…`**.
+
+> **Why:** Curated saturation vs tight “wail BPM” cohort deserve separate trees so listeners never confuse audience intent.
+
+**Sweep knobs:** **`init_noise_level`** **0.6→0.9**, **`SWEEP_N=3`**, **`--steps 15`**, **`pingpong`**, **`--match-source-length`**.
 
 ```bash
 python3 python/interpolateGen.py \
@@ -196,42 +263,57 @@ python3 python/interpolateGen.py \
   --match-source-length
 ```
 
-Because `**bash**` runs with `**set -u**`, I added `**SKIP_SEGMENT_STEP=1**` so I can reuse pre-segmented dirs without uncommenting placeholders:
+> **Why:** Three stops keeps render time humane while spanning “still wail-ish” versus “barely tethered”; fifteen steps reins in grain without month-long grids.
+
+Because **`bash`** runs **`set -u`**, I added **`SKIP_SEGMENT_STEP=1`** for pre-segmented dirs.
 
 ```bash
 SKIP_SEGMENT_STEP=1 bash scripts/WailStretchSMALL_pipeline_curated.sh
 SKIP_SEGMENT_STEP=1 bash scripts/WailStretchSMALL_pipeline.sh
 ```
 
-When I messed up `**AUDIO_FILE` expansions**, you and I chased `**AUDIO_FILE: unbound variable`**—that fix lives in chats `**b6ff13ee-e768-4121-a029-b298ffd947f8**`.
+> **Why:** Re-segmentation is costly and Somax fiddly—being able to hot-swap prompts without touching pickles saved entire evenings.
 
-**Terminal receipts I preserved:** `**terminals/1.txt`** exited **0** after **41 prompts** curated run (folders `**Audio/output/prompt{N}_sweep_init_noise_level_20260508_182717`**; concat outputs ~**1321074 frames / ~29.956 s each tier** stacking three trimmed ~**9.99 s** segments). `**terminals/8.txt`** exited **0** after **7** prompts into `**Audio/output/wailStretch300BPMtest/…20260508_185647`**—same acoustics fingerprint.
+The **`AUDIO_FILE: unbound variable`** chase produced safer guards (**`b6ff13ee-…`**).
 
-Concurrently `**f8786ab1-e549-46f5-af91-93ae9084c816**` was me iterating long-form prompts anchored on `**Documentation/stableAudioOpenSmall_Paper.pdf**`—that’s `**stable_audio_prompts_curated.json**`.
+> **Why:** Commented placeholders + **`set -u`** is lethal—I'd rather crash with instructions than phantom expansions wasting GPU hours mid-loop.
+
+**Terminal souvenirs:** **`terminals/1.txt`** exited **0** after **41** curated prompts (**`20260508_182717`** tree; **`~9.99 s`** segments → **`~29.956 s`** concats). **`terminals/8.txt`** exited **0** after **7** prompts under **`wailStretch300BPMtest`** (**`20260508_185647`**).
+
+> **Why:** Concrete stamps plus wave counts vindicate narration—knowing durations matched meant I wasn't gaslighting myself about cropping.
+
+Prompt craft thread **`f8786ab1-…`** tied prose to **`Documentation/stableAudioOpenSmall_Paper.pdf`**.
+
+> **Why:** When prompts drift from model strengths, grids feel random—anchoring language to the ARC/small-model story kept experiments intellectually tethered.
 
 *(Git: `61c1d6b`)*
 
 ---
 
-### Session — meta (you’re holding it)
+### Session — meta (this document)
 
-Cursor helped me merge git + IDE captures into `**Documentation/project_evolution_log.md*`* (`**61f6b832-8558-4349-af90-28af1b1a4088**` and follow-ups)—this rewrite is me speaking that same ledger aloud to you instead of stacking appendices.
+Merged git + transcripts + terminals into **`Documentation/project_evolution_log.md`** (**`61f6b832-…`**) and iterated here.
+
+> **Why:** Institutional memory dissipates—I’d rather sentimentalise process in prose than reconstruct intent from orphaned JSON.
 
 ---
 
-## Quick map — where binaries and corpora notionally plug in
+## Quick map — where binaries and corpora plug in
 
 
-| Script                                             | Canonical inputs (unless you flip vars)                                                                                                                 | Prompt list                                   | Outputs                                                                           |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------- |
-| `**scripts/alto_recorder_pipeline*.sh**`           | `**MultiCorpus2_alto-rec/alto_recorder_UNT.{wav,pickle}**` → `**alto_recorder_UNTSegments/**` · optional first **N** via `**MAX_SEGMENTS`** symlink tmp | `**scripts/alto_recorder_prompts.json**`      | `**Audio/output/prompt##_sweep_init_noise_level_<stamp>/**` + `**concatenated/**` |
-| `**scripts/gecVoxFull_pipeline_15step.sh**`        | `**MutliCorpus3_gecVox/gecVoxFull_no_silence.{wav,pickle}**` → `**…Segments/**`, first **40** default                                                   | `**scripts/gecVoxFull_prompts.json`**         | same pattern (`**SWEEP_N=10**`, `**0.3–0.9**`)                                    |
-| `**scripts/WailStretchSMALL_pipeline_curated.sh**` | `**Segments_wail_augmented_5xStretched**` (first **3** by default); optional `**SKIP_SEGMENT_STEP=1`**                                                  | `**stable_audio_prompts_curated.json**`       | flat `**Audio/output/prompt##_…**`                                                |
-| `**scripts/WailStretchSMALL_pipeline.sh**`         | same corpus dir notion                                                                                                                                  | `**wailStretch_prompts_2.json**` *(as saved)* | nests under `**Audio/output/wailStretch300BPMtest/*`*                             |
+| Script | Canonical inputs | Prompt list | Outputs |
+| --- | --- | --- | --- |
+| **`scripts/alto_recorder_pipeline*.sh`** | **`MultiCorpus2_alto-rec/alto_recorder_UNT.{wav,pickle}` → `alto_recorder_UNTSegments/`** (**`MAX_SEGMENTS`** trims) | **`scripts/alto_recorder_prompts.json`** | **`Audio/output/prompt##_sweep_init_noise_level_<stamp>/`** + **`concatenated/`** |
+| **`scripts/gecVoxFull_pipeline_15step.sh`** | **`MutliCorpus3_gecVox/gecVoxFull_no_silence.{wav,pickle}` → `…Segments/`** (first **40** default) | **`scripts/gecVoxFull_prompts.json`** | same pattern (**`SWEEP_N=10`, noise 0.3–0.9**) |
+| **`scripts/WailStretchSMALL_pipeline_curated.sh`** | **`Segments_wail_augmented_5xStretched`** (**`SKIP_SEGMENT_STEP=1`** friendly) | **`stable_audio_prompts_curated.json`** | flat **`Audio/output/prompt##_…`** |
+| **`scripts/WailStretchSMALL_pipeline.sh`** | same corpus dir notion | **`wailStretch_prompts_2.json`** *(as committed)* | nested **`Audio/output/wailStretch300BPMtest/`** |
 
+> **Why:** This table exists so you can skim “which JSON lights which fuse” faster than deciphering duplicated bash skeletons—I’m allergic to flipping four scripts mentally while listening.
 
 ---
 
 ## Keeping this conversational log honest
 
-Whenever you rerun something material, jot the `**TIMESTAMP**` you saw echoed, the `**PROMPT_FILE**`, `**MAX_SEGMENTS**`, `**SWEEP_N**`, and if you chased any stderr about `**flash_attn**` / CUDA—we’re almost always documenting **routing** (`python/interpolateGen.py …`) **not** blobs in Git.
+When you rerun something material, jot the echoed **`TIMESTAMP`**, **`PROMPT_FILE`**, **`MAX_SEGMENTS`**, **`SWEEP_N`**, and whether stderr showed **`flash_attn`** / CUDA issues—we mostly log **routing** (`python/interpolateGen.py …`), not WAV blobs themselves.
+
+> **Why:** The sounds age; the knobs should remain inspectable—I’d rather scribble timestamps than audition mystery folders labeled “final_final_v3.”
