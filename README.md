@@ -133,9 +133,20 @@ python python/testGen.py --model stable-audio-open
 | `setup/downloadModel.py`      | Downloads `stable-audio-open-1.0` (large model) from Hugging Face                                        |
 | `setup/downloadModelSmall.py` | Downloads `stable-audio-open-small` from Hugging Face                                                    |
 
+## Shell Scripts
+
+Multi-step workflows that chain Python scripts into reusable pipelines live in `scripts/`. Each script captures the full sequence — inputs, parameters, and orchestration — in a single file.
+
+```bash
+source venv/bin/activate
+bash scripts/alto_recorder_pipeline.sh
+```
+
+See [`Documentation/shell_scripts.md`](Documentation/shell_scripts.md) for details on writing and running these scripts, including looping over prompt files and timestamping output directories.
+
 ## Notes on models
 
-All generation scripts accept `--model stable-audio-open-small` (default) or `--model stable-audio-open`.
+Generation scripts accept `--model stable-audio-open-small` (default) or `--model stable-audio-open`. However, `stable-audio-open` is **not fully functional** in this repo at the moment. **Stick with `stable-audio-open-small` for now.**
 
 The small model uses ARC post-training with a contrastive discriminator loss that replaces Classifier-Free Guidance (CFG). The `--cfg-scale` flag only has an effect with the large model. See [Novack et al. 2025](https://arxiv.org/abs/2505.08175) for details.
 
