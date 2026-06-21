@@ -1,11 +1,12 @@
 import os
 import json
 import argparse
+from datetime import datetime
 
 import torch
 import soundfile as sf
 from stable_audio_tools.inference.generation import generate_diffusion_cond
-from output_naming import build_output_path
+from output_naming import build_output_path, OUTPUT_DIR
 from audio_utils import MODEL_REPO_MAP, get_device, load_model, postprocess_output
 
 AUDIO_EXTENSIONS = {".wav", ".flac", ".mp3", ".ogg", ".aiff", ".aif"}
@@ -103,9 +104,19 @@ def _run_text_to_audio(args, model, model_sr, sample_size, max_duration, device)
     """Generate audio from text prompt only (no input audio)."""
     target_duration = min(args.duration, max_duration) if args.duration else max_duration
 
+    if args.outdir:
+        out_dir = args.outdir
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        prompt_slug = args.prompt.lower().strip()
+        prompt_slug = prompt_slug.replace(" ", "-")[:20]
+        out_dir = os.path.join(OUTPUT_DIR, f"txt_{prompt_slug}_{timestamp}")
+    os.makedirs(out_dir, exist_ok=True)
+
     print(f"Mode: text-to-audio")
     print(f"Prompt: \"{args.prompt}\"")
     print(f"Duration: {target_duration:.2f}s  |  Generating {args.n} file(s)")
+    print(f"Output: {out_dir}")
     print("-" * 60)
 
     conditioning = [{
@@ -138,13 +149,29 @@ def _run_text_to_audio(args, model, model_sr, sample_size, max_duration, device)
             duration=target_duration,
             model=args.model,
             index=i,
-            output_dir=args.outdir,
+            output_dir=out_dir,
         )
         sf.write(out_path, output.numpy().T, model_sr)
         print(f"  → saved {out_path}")
 
     print("-" * 60)
-    out_dir = args.outdir or "Audio/output/"
+    params_record = {
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "mode": "text-to-audio",
+        "model": args.model,
+        "prompt": args.prompt,
+        "duration": target_duration,
+        "n": args.n,
+        "steps": args.steps,
+        "cfg_scale": args.cfg_scale,
+        "sampler_type": args.sampler_type,
+        "seed": args.seed,
+        "output_dir": os.path.abspath(out_dir),
+    }
+    params_path = os.path.join(out_dir, "params.json")
+    with open(params_path, "w") as f:
+        json.dump(params_record, f, indent=2)
+    print(f"Params written to {params_path}")
     print(f"Done. {args.n} file(s) written to {out_dir}")
 
 
@@ -157,11 +184,20 @@ def _run_audio_to_audio(args, model, model_sr, sample_size, max_duration, device
     if not audio_files:
         raise SystemExit(f"No audio files found in {args.indir}")
 
+    if args.outdir:
+        out_dir = args.outdir
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        indir_name = os.path.basename(os.path.normpath(args.indir))
+        out_dir = os.path.join(OUTPUT_DIR, f"a2a_{indir_name}_{timestamp}")
+    os.makedirs(out_dir, exist_ok=True)
+
     prompt_map = load_prompt_map(args.prompt_file) if args.prompt_file else None
 
     print(f"Mode: audio-to-audio")
     print(f"Input:  {args.indir}  ({len(audio_files)} files)")
     print(f"Noise level: {args.noise_level}")
+    print(f"Output: {out_dir}")
     if args.prompt:
         print(f"Global prompt: \"{args.prompt}\"")
     elif args.prompt_file:
@@ -225,13 +261,33 @@ def _run_audio_to_audio(args, model, model_sr, sample_size, max_duration, device
             sampler_type=args.sampler_type,
             duration=target_duration,
             model=args.model,
-            output_dir=args.outdir,
+            output_dir=out_dir,
         )
         sf.write(out_path, output.numpy().T, model_sr)
         print(f"  → saved {out_path}")
 
     print("-" * 60)
-    out_dir = args.outdir or "Audio/output/"
+    params_record = {
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "mode": "audio-to-audio",
+        "model": args.model,
+        "prompt": args.prompt,
+        "prompt_file": args.prompt_file,
+        "indir": args.indir,
+        "noise_level": args.noise_level,
+        "duration": args.duration,
+        "steps": args.steps,
+        "cfg_scale": args.cfg_scale,
+        "sampler_type": args.sampler_type,
+        "seed": args.seed,
+        "num_input_files": len(audio_files),
+        "input_files": [os.path.basename(f) for f in audio_files],
+        "output_dir": os.path.abspath(out_dir),
+    }
+    params_path = os.path.join(out_dir, "params.json")
+    with open(params_path, "w") as f:
+        json.dump(params_record, f, indent=2)
+    print(f"Params written to {params_path}")
     print(f"Done. {len(audio_files)} files written to {out_dir}")
 
 

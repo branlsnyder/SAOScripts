@@ -1,4 +1,5 @@
 import os
+import json
 import argparse
 import glob
 from datetime import datetime
@@ -224,6 +225,33 @@ def main():
     total = args.n * len(audio_paths)
     print("=" * 60)
     print(f"Done. {total} files written to {run_output_dir}")
+
+    params_record = {
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "model": args.model,
+        "prompt": args.prompt,
+        "duration": args.duration,
+        "sweep_param": args.param,
+        "sweep_start": args.start,
+        "sweep_end": args.end,
+        "sweep_n": args.n,
+        "sweep_values": sweep_values.tolist(),
+        "steps": args.steps,
+        "cfg_scale": args.cfg_scale,
+        "sigma_min": args.sigma_min,
+        "sigma_max": args.sigma_max,
+        "sampler_type": args.sampler_type,
+        "init_noise_level": args.init_noise_level,
+        "seed": args.seed,
+        "match_source_length": args.match_source_length,
+        "init_audio": args.init_audio,
+        "output_dir": run_output_dir,
+        "total_outputs": total,
+    }
+    params_path = os.path.join(run_output_dir, "params.json")
+    with open(params_path, "w") as f:
+        json.dump(params_record, f, indent=2)
+    print(f"Params written to {params_path}")
 
 
 if __name__ == "__main__":
