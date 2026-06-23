@@ -25,6 +25,10 @@ bwoosnydToken read.txt
 *.safetensors
 *.bin
 
+# AI coding assistant config
+.agents/
+.cursor/
+
 # Somax corpus data & bundled zip
 SomaxCorpusWork/Corpora/
 SomaxCorpusWork/Somax-Documentation/Somax2-master.zip
