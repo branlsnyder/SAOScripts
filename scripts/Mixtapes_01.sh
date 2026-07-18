@@ -23,8 +23,8 @@ cd "$PROJ_ROOT"
 SKIP_SEGMENT_STEP="${SKIP_SEGMENT_STEP:-0}"
 # AUDIO_FILE="SomaxCorpusWork/Corpora/MultiCorpus4_wail/<your_corpus>.wav"
 # PICKLE_FILE="SomaxCorpusWork/Corpora/MultiCorpus4_wail/<your_corpus>.pickle"
-SEGMENTS_DIR="/Users/brandonwoosnyder/Dropbox/docs-d/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/SomaxCorpusWork/Corpora/MutilCorpus6_KAACMixtapes/Gee/gee_segments"
-PROMPT_FILE="/Users/brandonwoosnyder/Dropbox/docs-d/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/scripts/music51_01_prompts.json" 
+SEGMENTS_DIR="/Users/brandonwoosnyder/Documents/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/SomaxCorpusWork/Corpora/MutilCorpus6_KAACMixtapes/Gee/gee_segments"
+PROMPT_FILE="/Users/brandonwoosnyder/Documents/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/scripts/music51_01_prompts.json"
 MAX_SEGMENTS=""  # leave empty for all segments, or set e.g. "5" for quick iteration
 SWEEP_N=8  # init_noise_level samples; must match --noise-levels in step 3
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"

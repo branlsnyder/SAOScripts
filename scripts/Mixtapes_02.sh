@@ -1,7 +1,7 @@
-
+# Based on mixtapes_01
 #!/usr/bin/env bash
 #
-# gecVoxFull_pipeline.sh
+# reduces prompts to fit neatly on keyboard. 14 6-step prompts
 #
 # Three-stage pipeline:
 #   1. Segment a Somax2 corpus into individual WAV files
@@ -9,8 +9,7 @@
 #        2. Run interpolateGen.py (init_noise_level sweep) on the segments
 #        3. Organize outputs by noise level and concatenate
 #
-# Usage:
-#   bash scripts/gecVoxFull_pipeline.sh
+# 
 
 set -euo pipefail
 
@@ -18,40 +17,41 @@ PROJ_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJ_ROOT"
 
 # --- Paths ---
-# Step 1 needs these Somax2 sources (uncomment + fix paths). If SEGMENTS_DIR is already filled
-# with .wav files from a prior run, skip step 1: SKIP_SEGMENT_STEP=1 bash scripts/...
+# Step 1 segments the audio file into equal-length WAV clips using segment_audio.py.
+# If SEGMENTS_DIR is already filled with .wav files from a prior run, skip step 1:
+#   SKIP_SEGMENT_STEP=1 bash scripts/...
 SKIP_SEGMENT_STEP="${SKIP_SEGMENT_STEP:-0}"
-# AUDIO_FILE="SomaxCorpusWork/Corpora/MultiCorpus4_wail/<your_corpus>.wav"
-# PICKLE_FILE="SomaxCorpusWork/Corpora/MultiCorpus4_wail/<your_corpus>.pickle"
-SEGMENTS_DIR="/Users/brandonwoosnyder/Documents/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/SomaxCorpusWork/Corpora/MultiCorpus5_SallyDaley/SallySegements"
-PROMPT_FILE="/Users/brandonwoosnyder/Documents/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/scripts/music51_01_prompts.json"
+AUDIO_FILE="${AUDIO_FILE:-/Users/brandonwoosnyder/Documents/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/SomaxCorpusWork/Corpora/MutilCorpus6_KAACMixtapes/Gravity/gravity - sara bareilles.wav}"
+SEGMENTS_DIR="${SEGMENTS_DIR:-/Users/brandonwoosnyder/Documents/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/SomaxCorpusWork/Corpora/MutilCorpus6_KAACMixtapes/Gravity/gravity_segments}"
+MAX_SEGMENT_SECONDS="${MAX_SEGMENT_SECONDS:-11}"
+PROMPT_FILE="/Users/brandonwoosnyder/Documents/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/scripts/mixtapes_02_prompts.json"
 MAX_SEGMENTS=""  # leave empty for all segments, or set e.g. "5" for quick iteration
-SWEEP_N=8  # init_noise_level samples; must match --noise-levels in step 3
+SWEEP_N=6  # init_noise_level samples; must match --noise-levels in step 3
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 
 
 # ============================================================
-# STEP 1 — Segment the Somax2 corpus (runs once)
+# STEP 1 — Segment audio into equal-length clips (runs once)
 # ============================================================
 if [[ "$SKIP_SEGMENT_STEP" == "1" ]]; then
     echo "==== STEP 1: skipped (SKIP_SEGMENT_STEP=1) ===="
     echo "  using existing segments in: $SEGMENTS_DIR"
     echo ""
-elif [[ -z "${AUDIO_FILE:-}" || -z "${PICKLE_FILE:-}" ]]; then
-    echo "AUDIO_FILE / PICKLE_FILE are unset. Uncomment them under \"--- Paths ---\","
+elif [[ -z "${AUDIO_FILE:-}" ]]; then
+    echo "AUDIO_FILE is unset. Set it under \"--- Paths ---\","
     echo "or skip segmentation when SEGMENTS_DIR already has clips: SKIP_SEGMENT_STEP=1" >&2
     exit 1
 else
-    echo "==== STEP 1: Segmenting corpus ===="
-    echo "  audio:   $AUDIO_FILE"
-    echo "  pickle:  $PICKLE_FILE"
-    echo "  output:  $SEGMENTS_DIR"
+    echo "==== STEP 1: Segmenting audio ===="
+    echo "  audio:     $AUDIO_FILE"
+    echo "  max secs:  $MAX_SEGMENT_SECONDS"
+    echo "  output:    $SEGMENTS_DIR"
     echo ""
 
-    python3 SomaxCorpusWork/pythonScripts/segment_corpus.py \
+    python3 python/segment_audio.py \
         "$AUDIO_FILE" \
-        "$PICKLE_FILE" \
-        "$SEGMENTS_DIR"
+        --max-seconds "$MAX_SEGMENT_SECONDS" \
+        --output-dir "$SEGMENTS_DIR"
 fi
 
 
@@ -59,10 +59,13 @@ fi
 if [[ -n "$MAX_SEGMENTS" ]]; then
     SWEEP_INPUT="$(mktemp -d)"
     trap 'rm -rf "$SWEEP_INPUT"' EXIT
-    for f in $(ls "$SEGMENTS_DIR"/*.wav | head -n "$MAX_SEGMENTS"); do
+    total_count=0
+    for f in "$SEGMENTS_DIR"/*.wav; do
+        if (( total_count >= MAX_SEGMENTS )); then break; fi
         ln -s "$(realpath "$f")" "$SWEEP_INPUT/"
+        total_count=$((total_count + 1))
     done
-    TOTAL=$(ls "$SEGMENTS_DIR"/*.wav | wc -l | tr -d ' ')
+    TOTAL=$(ls "$SEGMENTS_DIR"/*.wav 2>/dev/null | wc -l | tr -d ' ')
     echo ""
     echo "Using first $MAX_SEGMENTS of $TOTAL segments for steps 2-3"
 else

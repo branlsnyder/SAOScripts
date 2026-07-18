@@ -4,7 +4,7 @@ Segment an audio file into equal-length parts, each under a given maximum durati
 Usage:
     python segment_audio.py input.wav
     python segment_audio.py input.wav --max-seconds 11 --output-dir segments
-    python3 python/segment_audio.py "/Users/brandonwoosnyder/Dropbox/docs-d/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/SomaxCorpusWork/Corpora/MutilCorpus6_KAACMixtapes/Gee/Gee - Girls Generation.wav" --max-seconds 11 --output-dir "/Users/brandonwoosnyder/Dropbox/docs-d/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/SomaxCorpusWork/Corpora/MutilCorpus6_KAACMixtapes/Gee/gee_segments"
+    python3 python/segment_audio.py "/Users/brandonwoosnyder/Documents/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/SomaxCorpusWork/Corpora/MutilCorpus6_KAACMixtapes/Gee/Gee - Girls Generation.wav" --max-seconds 11 --output-dir "/Users/brandonwoosnyder/Documents/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/SomaxCorpusWork/Corpora/MutilCorpus6_KAACMixtapes/Gee/gee_segments"
 """
 
 import argparse
