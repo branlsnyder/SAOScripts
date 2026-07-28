@@ -22,12 +22,13 @@ cd "$PROJ_ROOT"
 #   SKIP_SEGMENT_STEP=1 bash scripts/...
 SKIP_SEGMENT_STEP="${SKIP_SEGMENT_STEP:-0}"
 AUDIO_FILE="${AUDIO_FILE:-/Users/brandonwoosnyder/Documents/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/SomaxCorpusWork/Corpora/MutilCorpus6_KAACMixtapes/Gravity/gravity - sara bareilles.wav}"
-SEGMENTS_DIR="${SEGMENTS_DIR:-$(dirname "$AUDIO_FILE")/segments}"
+SEGMENTS_DIR="${SEGMENTS_DIR:-$(dirname "$AUDIO_FILE")/segments_$(basename "$AUDIO_FILE" .wav)}"
 MAX_SEGMENT_SECONDS="${MAX_SEGMENT_SECONDS:-11}"
-PROMPT_FILE="/Users/brandonwoosnyder/Documents/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/scripts/mixtapes_02_prompts.json"
-MAX_SEGMENTS=""  # leave empty for all segments, or set e.g. "5" for quick iteration
-SWEEP_N=6  # init_noise_level samples; must match --noise-levels in step 3
+PROMPT_FILE="/Users/brandonwoosnyder/Documents/04_Repos/CREATIVE WORK REPOS/StableAudioWorkspace/scripts/joo_prompts.json"
+MAX_SEGMENTS="6"  # leave empty for all segments, or set e.g. "5" for quick iteration
+SWEEP_N=4  # init_noise_level samples; must match --noise-levels in step 3
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+AUDIO_BASENAME="$(basename "$AUDIO_FILE" | sed 's/\.[^.]*$//' | tr ' ' '-')"
 
 
 # ============================================================
@@ -88,7 +89,7 @@ echo "==== Prompt file: $PROMPT_FILE ($NUM_PROMPTS prompts) ===="
 for ((i=0; i<NUM_PROMPTS; i++)); do
     PROMPT="${PROMPTS[$i]}"
     PROMPT_IDX=$(printf "%02d" $((i + 1)))
-    OUTDIR="Audio/output/prompt${PROMPT_IDX}_sweep_init_noise_level_${TIMESTAMP}"
+    OUTDIR="Audio/output/prompt${PROMPT_IDX}_sweep_init_noise_level_${AUDIO_BASENAME}_${TIMESTAMP}"
 
     echo ""
     echo "============================================================"
